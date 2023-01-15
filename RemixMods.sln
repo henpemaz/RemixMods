@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33205.214
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RemixMods", "RemixMods\RemixMods.csproj", "{13B64B4A-072A-4DA3-A0E9-4BB61E4F21BD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{13B64B4A-072A-4DA3-A0E9-4BB61E4F21BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{13B64B4A-072A-4DA3-A0E9-4BB61E4F21BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{13B64B4A-072A-4DA3-A0E9-4BB61E4F21BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{13B64B4A-072A-4DA3-A0E9-4BB61E4F21BD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {48908263-1737-44A3-B9CD-F1E4961577BD}
+	EndGlobalSection
+EndGlobal
