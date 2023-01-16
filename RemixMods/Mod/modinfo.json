@@ -1,0 +1,12 @@
+{
+  "id": "henpemaz_remixmods",
+  "name": "Remix Mods",
+  "version": "0.1.0",
+  "target_game_version": "v1.9.0",
+  "authors": "Henpemaz",
+  "description": "The thing that does the thang",
+  "youtube_trailer_id": "dQw4w9WgXcQ",
+  "requirements": [],
+  "requirements_names": [],
+  "checksum_override_version": false
+}

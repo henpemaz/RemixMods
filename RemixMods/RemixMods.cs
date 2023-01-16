@@ -1,13 +1,21 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using BepInEx;
 
 namespace RemixMods
 {
-    public class RemixMods
+    [BepInPlugin("com.henpemaz.remixmods", "Remix Mods", "0.1.0")]
+    public class RemixMods : BaseUnityPlugin
     {
+        public void OnEnable()
+        {
+            On.RainWorld.OnModsInit += OnModsInit;
+        }
 
+        private void OnModsInit(On.RainWorld.orig_OnModsInit orig, RainWorld self)
+        {
+            orig(self);
+
+            Logger.LogDebug("Hello world!");
+        }
     }
 }
