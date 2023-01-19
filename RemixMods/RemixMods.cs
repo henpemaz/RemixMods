@@ -8,6 +8,7 @@ namespace RemixMods
     {
         public void OnEnable()
         {
+            Logger.LogInfo("Enabled");
             On.RainWorld.OnModsInit += OnModsInit;
         }
 
@@ -15,7 +16,8 @@ namespace RemixMods
         {
             orig(self);
 
-            Logger.LogDebug("Hello world!");
+            Logger.LogInfo("Hello world! im new");
+            //Logger.LogInfo(SteamFriends.SetRichPresence("connect", "RainWorld.exe -online"));
         }
     }
 }
