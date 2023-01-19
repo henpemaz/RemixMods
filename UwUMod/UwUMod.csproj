@@ -1,0 +1,152 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{C4DACF73-9E9C-40B4-AD66-ACE462CC83A2}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>UwUMod</RootNamespace>
+    <AssemblyName>UwUMod</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp-firstpass">
+      <HintPath>..\..\RemixReferences\Assembly-CSharp-firstpass.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="BepInEx">
+      <HintPath>..\..\RemixReferences\BepInEx.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="com.rlabrecque.steamworks.net">
+      <HintPath>..\..\RemixReferences\com.rlabrecque.steamworks.net.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="HOOKS-Assembly-CSharp">
+      <HintPath>..\..\RemixReferences\HOOKS-Assembly-CSharp.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Mono.Cecil">
+      <HintPath>..\..\RemixReferences\Mono.Cecil.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Mono.Cecil.Rocks">
+      <HintPath>..\..\RemixReferences\Mono.Cecil.Rocks.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="MonoMod">
+      <HintPath>..\..\RemixReferences\MonoMod.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="MonoMod.RuntimeDetour">
+      <HintPath>..\..\RemixReferences\MonoMod.RuntimeDetour.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="MonoMod.Utils">
+      <HintPath>..\..\RemixReferences\MonoMod.Utils.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="PUBLIC-Assembly-CSharp">
+      <HintPath>..\..\RemixReferences\PUBLIC-Assembly-CSharp.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+    <Reference Include="UnityEngine">
+      <HintPath>..\..\RemixReferences\UnityEngine.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>..\..\RemixReferences\UnityEngine.CoreModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.ImageConversionModule">
+      <HintPath>..\..\RemixReferences\UnityEngine.ImageConversionModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>..\..\RemixReferences\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="UwUMod.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Mod\modinfo.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Mod\illustrations\Intro_Roll_B.png" />
+    <Content Include="Mod\illustrations\Intro_Roll_C.png" />
+    <Content Include="Mod\illustrations\MainTitle.png" />
+    <Content Include="Mod\illustrations\MainTitle2.png" />
+    <Content Include="Mod\illustrations\MainTitleBevel.png" />
+    <Content Include="Mod\illustrations\MainTitleShadow.png" />
+    <Content Include="Mod\illustrations\MultiplayerPortrait01.png" />
+    <Content Include="Mod\illustrations\MultiplayerPortrait11.png" />
+    <Content Include="Mod\illustrations\MultiplayerPortrait21.png" />
+    <Content Include="Mod\illustrations\MultiplayerPortrait31.png" />
+    <Content Include="Mod\illustrations\SandboxShadow.png" />
+    <Content Include="Mod\illustrations\SandboxTitle.png" />
+    <Content Include="Mod\illustrations\Title_CC.png" />
+    <Content Include="Mod\illustrations\Title_CC_Shadow.png" />
+    <Content Include="Mod\illustrations\Title_DS.png" />
+    <Content Include="Mod\illustrations\Title_DS_Shadow.png" />
+    <Content Include="Mod\illustrations\Title_GW.png" />
+    <Content Include="Mod\illustrations\Title_GW_Shadow.png" />
+    <Content Include="Mod\illustrations\Title_HI.png" />
+    <Content Include="Mod\illustrations\Title_HI_Shadow.png" />
+    <Content Include="Mod\illustrations\Title_LF.png" />
+    <Content Include="Mod\illustrations\Title_LF_Shadow.png" />
+    <Content Include="Mod\illustrations\Title_SB.png" />
+    <Content Include="Mod\illustrations\Title_SB_Shadow.png" />
+    <Content Include="Mod\illustrations\Title_SH.png" />
+    <Content Include="Mod\illustrations\Title_SH_Shadow.png" />
+    <Content Include="Mod\illustrations\Title_SI.png" />
+    <Content Include="Mod\illustrations\Title_SI_Shadow.png" />
+    <Content Include="Mod\illustrations\Title_SL.png" />
+    <Content Include="Mod\illustrations\Title_SL_Shadow.png" />
+    <Content Include="Mod\illustrations\Title_SS.png" />
+    <Content Include="Mod\illustrations\Title_SS_Shadow.png" />
+    <Content Include="Mod\illustrations\Title_SU.png" />
+    <Content Include="Mod\illustrations\Title_SU_Shadow.png" />
+    <Content Include="Mod\illustrations\Title_UW.png" />
+    <Content Include="Mod\illustrations\Title_UW_Shadow.png" />
+    <Content Include="Mod\thumbnail.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Mod\plugins\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>copy $(TargetPath) $(ProjectDir)Mod\plugins\</PostBuildEvent>
+  </PropertyGroup>
+</Project>
