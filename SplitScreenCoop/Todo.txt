@@ -1,0 +1,9 @@
+﻿Enable player 2
+
+make player2 3 4 checkboxes
+
+make player2 class dropdown
+
+sleep in different shelters
+
+karma loss if all die, no change if one survives, gain if "most" survive
