@@ -11,6 +11,7 @@ using MonoMod.RuntimeDetour;
 using MonoMod.RuntimeDetour.HookGen;
 using MonoMod.Cil;
 using Mono.Cecil.Cil;
+using System.IO;
 
 [module: UnverifiableCode]
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -54,12 +55,12 @@ namespace SplitScreenCoop
         public static bool alwaysSplit;
         public static Vector2[] camOffsets = new Vector2[] { new Vector2(0, 0), new Vector2(32000, 0), new Vector2(0, 32000), new Vector2(32000, 32000) }; // one can dream
 
-        int curCamera = -1;
+        static int curCamera = -1;
         public static CameraListener[] cameraListeners = new CameraListener[2];
         public static RoomRealizer realizer2;
         private bool init;
 
-        //float offset;
+        float offset;
         void Update() // debug thinghies
         {
             if (Input.GetKeyDown("f8"))
@@ -76,17 +77,17 @@ namespace SplitScreenCoop
             //    if (GameObject.FindObjectOfType<RainWorld>()?.processManager?.currentMainLoop is RainWorldGame game) game.world.rainCycle.ArenaEndSessionRain();
             //}
 
-            //if (Input.GetKeyDown("1"))
-            //{
-            //    offset += 125f;
-            //    Debug.Log(offset);
-            //}
+            if (Input.GetKeyDown("1"))
+            {
+                offset += 0.125f;
+                Debug.Log(offset);
+            }
 
-            //if (Input.GetKeyDown("2"))
-            //{
-            //    offset -= 125f;
-            //    Debug.Log(offset);
-            //}
+            if (Input.GetKeyDown("2"))
+            {
+                offset -= 0.125f;
+                Debug.Log(offset);
+            }
         }
 
         private void OnModsInit(On.RainWorld.orig_OnModsInit orig, RainWorld self)
@@ -96,10 +97,36 @@ namespace SplitScreenCoop
                 if (init) return;
                 init = true;
 
-                On.Futile.Init += Futile_Init; // turn on splitscreen
-                On.Futile.UpdateCameraPosition += Futile_UpdateCameraPosition; // handle custom switcheroos
+                try
+                {
+                    string path = AssetManager.ResolveFilePath("AssetBundles" + Path.DirectorySeparatorChar + "splitscreenshaders");
+                    Logger.LogInfo(path);
+                    if (string.IsNullOrEmpty(path)) goto done;
+                    AssetBundle bundle = AssetBundle.LoadFromFile(path);
+                    Logger.LogInfo(bundle);
+                    if (bundle == null) goto done;
 
-                // game hook moved to rwstart for compat, lotsa things in it
+                    Shader[] newShaders = bundle.LoadAllAssets<Shader>();
+                    foreach (Shader shader in newShaders)
+                    {
+                        Logger.LogInfo("found shader " + shader.name);
+                        //if(shader.name == "Futile/LevelColor") self.Shaders["LevelColor"].shader = shader;
+                        foreach (FShader oldshader in self.Shaders.Values)
+                        {
+                            if (oldshader.shader.name == shader.name) oldshader.shader = shader; // crazy talk
+                        }
+                    }
+                done:;
+                }
+                catch (Exception e)
+                {
+                    Logger.LogError(e);
+                    throw;
+                }
+
+                //On.Futile.Init += Futile_Init; // turn on splitscreen
+                //On.Futile.UpdateCameraPosition += Futile_UpdateCameraPosition; // handle custom switcheroos
+
                 On.RoomCamera.ctor += RoomCamera_ctor1; // bind cam to camlistener
                 On.RainWorldGame.Update += RainWorldGame_Update; // split unsplit
                 On.RainWorldGame.ShutDownProcess += RainWorldGame_ShutDownProcess; // unbind camlistener
@@ -109,7 +136,7 @@ namespace SplitScreenCoop
                 On.RoomCamera.Update += RoomCamera_Update;
                 On.RoomCamera.MoveCamera_int += RoomCamera_MoveCamera_int;
                 On.RoomCamera.MoveCamera_Room_int += RoomCamera_MoveCamera_Room_int; // can also colapse to single cam if one of the cams is dead 
-
+                
                 // fixes in fixes file
                 On.OverWorld.WorldLoaded += OverWorld_WorldLoaded; // roomrealizer 2 
                 On.RoomCamera.FireUpSinglePlayerHUD += RoomCamera_FireUpSinglePlayerHUD;// displace cam2 map
@@ -120,7 +147,6 @@ namespace SplitScreenCoop
                 On.HUD.DialogBox.DrawPos += DialogBox_DrawPos; // center dialog in half screen
                 On.RoomRealizer.CanAbstractizeRoom += RoomRealizer_CanAbstractizeRoom;
 
-                // jolly also hooks this to spawn players, hooked late for interop
                 IL.RainWorldGame.ctor += RainWorldGame_ctor1;
                 On.RainWorldGame.ctor += RainWorldGame_ctor; // make roomcam2, follow fix
 
@@ -140,49 +166,12 @@ namespace SplitScreenCoop
                 // set shader variables into a dict so it can be set per-camera
                 new Hook(typeof(Shader).GetMethod("SetGlobalColor", new Type[] { typeof(string), typeof(Color) }),
                     typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalColor"), this);
+                new Hook(typeof(Shader).GetMethod("SetGlobalVector", new Type[] { typeof(string), typeof(Vector4) }),
+                    typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalVector"), this);
                 new Hook(typeof(Shader).GetMethod("SetGlobalFloat", new Type[] { typeof(string), typeof(float) }),
                     typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalFloat"), this);
                 new Hook(typeof(Shader).GetMethod("SetGlobalTexture", new Type[] { typeof(string), typeof(Texture) }),
                     typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalTexture"), this);
-
-                // interop in interop files
-                if (Type.GetType("JollyCoop.PlayerHK, JollyCoop") is Type jol)
-                {
-                    try
-                    {
-                        new Hook(jol.GetMethod("HandleCoopCamera", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static),
-                            typeof(SplitScreenCoop).GetMethod("FixHandleCoopCamera"), this); // jolly don't mess with the cameras PLEASE
-                    }
-                    catch (Exception e) { Debug.LogException(e); }
-                    try
-                    {
-                        new Hook(Type.GetType("JollyCoop.PlayerMeter, JollyCoop").GetMethod("Draw", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance),
-                            typeof(SplitScreenCoop).GetMethod("FixPlayerMeterDraw"), this); // if only there was a way to get which player the hud is following... oh
-                    }
-                    catch (Exception e) { Debug.LogException(e); }
-                    try
-                    {
-                        HookEndpointManager.Modify(Type.GetType("JollyCoop.RoomScriptHK/VanillaEndingGhost, JollyCoop").GetMethod("Update", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance),
-                            (Action<ILContext>)FixjollyBodyTransplant); // christ
-                    }
-                    catch (Exception e) { Debug.LogException(e); }
-                }
-
-                if (Type.GetType("SBCameraScroll.RoomCameraMod, SBCameraScroll") is Type sbcs)
-                {
-                    try
-                    {
-                        HookEndpointManager.Modify(sbcs.GetMethod("CheckBorders", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static),
-                            (Action<ILContext>)FixsbcsCheckBorders); // please do offsets right
-                    }
-                    catch (Exception e) { Debug.LogException(e); }
-                    try
-                    {
-                        HookEndpointManager.Modify(sbcs.GetMethod("RoomCamera_ApplyPositionChange", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static),
-                            (Action<ILContext>)FixsbcsApplyPositionChange); // the right texture please
-                    }
-                    catch (Exception e) { Debug.Log(e); }
-                }
 
             }
             catch (Exception e)
@@ -211,6 +200,7 @@ namespace SplitScreenCoop
 
             if (CurrentSplitMode == SplitMode.SplitHorizontal)
             {
+                self.splitScreen = true;
                 self.camera2.enabled = true;
                 self._camera.orthographicSize = Futile.screen.pixelHeight / 2f * Futile.displayScaleInverse * 0.5f;
                 self._camera.rect = new Rect(0f, 0.5f, 1f, 1f);
@@ -223,6 +213,7 @@ namespace SplitScreenCoop
             }
             else if (CurrentSplitMode == SplitMode.SplitVertical)
             {
+                self.splitScreen = true;
                 self.camera2.enabled = true;
                 self._camera.orthographicSize = Futile.screen.pixelHeight / 2f * Futile.displayScaleInverse * 1f;
                 self._camera.rect = new Rect(0f, 0f, 0.5f, 1f);
@@ -238,6 +229,7 @@ namespace SplitScreenCoop
                 self._camera.orthographicSize = Futile.screen.pixelHeight / 2f * Futile.displayScaleInverse * 1f;
                 self._camera.rect = new Rect(0f, 0f, 1f, 1f);
                 self.camera2.enabled = false;
+                self.splitScreen = false;
             }
         }
 
@@ -267,7 +259,7 @@ namespace SplitScreenCoop
                     }
                 });
             }
-            else Debug.LogException(new Exception("Couldn't IL-hook RainWorldGame_ctor1 from SplitScreenMod")); // deffendisve progrmanig
+            else Logger.LogError(new Exception("Couldn't IL-hook RainWorldGame_ctor1 from SplitScreenMod")); // deffendisve progrmanig
         }
 
         private void RainWorldGame_ctor(On.RainWorldGame.orig_ctor orig, RainWorldGame self, ProcessManager manager)
@@ -325,6 +317,7 @@ namespace SplitScreenCoop
                 foreach (var c in self.SpriteLayers) c.SetPosition(camOffsets[self.cameraNumber]);
                 self.offset = Vector2.zero; // nulla zero niente don't use it
                 // so many drawables don't ever fucking move or don't take into account the offset its infuriating
+                // so we don't relly on any of that
             }
         }
 
@@ -501,6 +494,16 @@ namespace SplitScreenCoop
             orig(propertyName, vec);
             if (curCamera >= 0 && cameraListeners[curCamera] is CameraListener l)
             {
+                l.ShaderColors[propertyName] = vec;
+            }
+        }
+
+        public delegate void delSetGlobalVector(string propertyName, Vector4 vec);
+        public void Shader_SetGlobalVector(delSetGlobalVector orig, string propertyName, Vector4 vec)
+        {
+            orig(propertyName, vec);
+            if (curCamera >= 0 && cameraListeners[curCamera] is CameraListener l)
+            {
                 if (CurrentSplitMode != SplitMode.NoSplit)
                 {
                     if (propertyName == "_spriteRect")
@@ -509,13 +512,17 @@ namespace SplitScreenCoop
                         int b = CurrentSplitMode == SplitMode.SplitHorizontal ? 3 : 2;
                         vec[a] = vec[a] * 2f - 0.5f;
                         vec[b] = vec[b] * 2f - 0.5f;
+                        //vec[a] = vec[a] - 0.25f;
+                        //vec[b] = vec[b] - 0.25f;
+                        //vec[a] = vec[a] + offset;
+                        //vec[b] = vec[b] + offset;
                     }
-                    else if (propertyName == "_caminroomrect")
-                    {
-                        vec[CurrentSplitMode == SplitMode.SplitHorizontal ? 3 : 2] /= 2f;
-                    }
+                    //else if (propertyName == "_camInRoomRect")
+                    //{
+                    //    vec[CurrentSplitMode == SplitMode.SplitHorizontal ? 3 : 2] /= 2f;
+                    //}
                 }
-                l.ShaderColors[propertyName] = vec;
+                l.ShaderVectors[propertyName] = vec;
             }
         }
 
@@ -543,12 +550,14 @@ namespace SplitScreenCoop
         {
             public RoomCamera roomCamera;
             public Dictionary<string, Color> ShaderColors = new Dictionary<string, Color>();
+            public Dictionary<string, Vector4> ShaderVectors = new Dictionary<string, Vector4>();
             public Dictionary<string, float> ShaderFloats = new Dictionary<string, float>();
             public Dictionary<string, Texture> ShaderTextures = new Dictionary<string, Texture>();
 
             void OnPreRender()
             {
                 foreach (var kv in ShaderColors) Shader.SetGlobalColor(kv.Key, kv.Value);
+                foreach (var kv in ShaderVectors) Shader.SetGlobalVector(kv.Key, kv.Value);
                 foreach (var kv in ShaderFloats) Shader.SetGlobalFloat(kv.Key, kv.Value);
                 foreach (var kv in ShaderTextures) Shader.SetGlobalTexture(kv.Key, kv.Value);
             }

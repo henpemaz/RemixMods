@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MapWarp", "MapWarp\MapWarp.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UwUMod", "UwUMod\UwUMod.csproj", "{C4DACF73-9E9C-40B4-AD66-ACE462CC83A2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SplitScreenCoop", "SplitScreenCoop\SplitScreenCoop.csproj", "{0CECDFBA-250A-4118-AC07-BE1FAE2FBB00}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{C4DACF73-9E9C-40B4-AD66-ACE462CC83A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C4DACF73-9E9C-40B4-AD66-ACE462CC83A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C4DACF73-9E9C-40B4-AD66-ACE462CC83A2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0CECDFBA-250A-4118-AC07-BE1FAE2FBB00}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0CECDFBA-250A-4118-AC07-BE1FAE2FBB00}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0CECDFBA-250A-4118-AC07-BE1FAE2FBB00}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0CECDFBA-250A-4118-AC07-BE1FAE2FBB00}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

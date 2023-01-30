@@ -161,18 +161,20 @@ namespace SplitScreenCoop
         private void ShortcutHandler_Update(ILContext il)
         {
             var c = new ILCursor(il);
+            int indexLoc = 0;
 
             // this is loading room if creature followed by camera
             if (c.TryGotoNext(MoveType.Before,
                 i => i.MatchCallvirt<AbstractCreature>("FollowedByCamera"),
                 i => i.MatchBrfalse(out _),
                 i => i.MatchLdarg(0),
-                i => i.MatchLdfld<ShortcutHandler>("betweenRoomsWaitingLobby")
+                i => i.MatchLdfld<ShortcutHandler>("betweenRoomsWaitingLobby"),
+                i => i.MatchLdloc(out indexLoc)
                 ))
             {
                 c.Index++;
                 c.Emit(OpCodes.Ldarg_0);
-                c.Emit(OpCodes.Ldloc, 6);
+                c.Emit(OpCodes.Ldloc, indexLoc);
                 // was A && !B
                 // becomes (A || A2) && !B
                 // b param here is A
@@ -181,7 +183,7 @@ namespace SplitScreenCoop
                     return b || (sc.game.cameras.Length > 1 && sc.betweenRoomsWaitingLobby[k].creature.abstractCreature.FollowedByCamera(1));
                 });
             }
-            else Debug.LogException(new Exception("Couldn't IL-hook ShortcutHandler_Update part 1 FollowedByCamera from SplitScreenMod")); // deffendisve progrmanig
+            else Logger.LogError(new Exception("Couldn't IL-hook ShortcutHandler_Update part 1 FollowedByCamera from SplitScreenMod")); // deffendisve progrmanig
 
             // this is actually loading the room, should add to tracked rooms, cmon game
             if (c.TryGotoNext(MoveType.Before,
@@ -195,7 +197,7 @@ namespace SplitScreenCoop
                     if (w?.game?.roomRealizer is RoomRealizer rr) rr.AddNewTrackedRoom(r, true);
                 });
             }
-            else Debug.LogException(new Exception("Couldn't IL-hook ShortcutHandler_Update part 2 AddNewTrackedRoom from SplitScreenMod")); // deffendisve progrmanig
+            else Logger.LogError(new Exception("Couldn't IL-hook ShortcutHandler_Update part 2 AddNewTrackedRoom from SplitScreenMod")); // deffendisve progrmanig
 
 
             // this is moving the camera if the creature is followed by camera
@@ -210,14 +212,14 @@ namespace SplitScreenCoop
                 c.GotoLabel(jump);
 
                 c.Emit(OpCodes.Ldarg_0);
-                c.Emit(OpCodes.Ldloc, 6);
+                c.Emit(OpCodes.Ldloc, indexLoc);
                 c.EmitDelegate<Action<ShortcutHandler, int>>((sc, k) =>
                 {
                     if (sc.game.cameras.Length > 1 && sc.betweenRoomsWaitingLobby[k].creature.abstractCreature.FollowedByCamera(1))
                         sc.game.cameras[1].MoveCamera(sc.betweenRoomsWaitingLobby[k].room.realizedRoom, sc.betweenRoomsWaitingLobby[k].room.nodes[sc.betweenRoomsWaitingLobby[k].entranceNode].viewedByCamera);
                 });
             }
-            else Debug.LogException(new Exception("Couldn't IL-hook ShortcutHandler_Update part 3 MoveCamera from SplitScreenMod")); // deffendisve progrmanig
+            else Logger.LogError(new Exception("Couldn't IL-hook ShortcutHandler_Update part 3 MoveCamera from SplitScreenMod")); // deffendisve progrmanig
         }
 
         // activating a room should add it to the tracked active rooms
@@ -236,7 +238,7 @@ namespace SplitScreenCoop
                     if (w?.game?.roomRealizer is RoomRealizer rr) rr.AddNewTrackedRoom(r, true);
                 });
             }
-            else Debug.LogException(new Exception("Couldn't IL-hook ShortcutHandler_SuckInCreature AddNewTrackedRoom from SplitScreenMod")); // deffendisve progrmanig
+            else Logger.LogError(new Exception("Couldn't IL-hook ShortcutHandler_SuckInCreature AddNewTrackedRoom from SplitScreenMod")); // deffendisve progrmanig
         }
 
         // fixes draw parameter changing on repeated calls to init, would array-oob on the previous leaser
@@ -254,7 +256,7 @@ namespace SplitScreenCoop
                     return pole.leafPairs > 0 ? pole.leafPairs : was;
                 });
             }
-            else Debug.LogException(new Exception("Couldn't IL-hook PoleMimicGraphics_InitiateSprites from SplitScreenMod")); // deffendisve progrmanig
+            else Logger.LogError(new Exception("Couldn't IL-hook PoleMimicGraphics_InitiateSprites from SplitScreenMod")); // deffendisve progrmanig
         }
 
         private void RoomCamera_ctor(ILContext il)
@@ -273,7 +275,7 @@ namespace SplitScreenCoop
                     return camnum > 0 ? name + camnum.ToString() : name;
                 });
             }
-            else Debug.LogException(new Exception("Couldn't IL-hook RoomCamera_ctor from SplitScreenMod")); // deffendisve progrmanig
+            else Logger.LogError(new Exception("Couldn't IL-hook RoomCamera_ctor from SplitScreenMod")); // deffendisve progrmanig
         }
 
         // proper scroll and boundaries for our custom split modes. Originally only supported horiz split
@@ -357,9 +359,7 @@ namespace SplitScreenCoop
                         return v;
                     });
 
-                    ILLabel hop = null;
-                    c.GotoNext(MoveType.After, i => i.MatchLdfld<RoomCamera>("splitScreenMode"), i => i.MatchBrfalse(out hop)); // IL_0116
-                    c.GotoLabel(hop, MoveType.After);
+                    c.GotoNext(MoveType.After, i => i.MatchLdfld<RoomCamera>("splitScreenMode"), i => i.MatchBrtrue(out _)); // IL_0116
                     c.MoveAfterLabels();
                     c.Emit(OpCodes.Ldarg_0); // RoomCamera
                     c.EmitDelegate<Func<float, RoomCamera, float>>((v, rc) =>
@@ -372,8 +372,7 @@ namespace SplitScreenCoop
                     });
 
 
-                    c.GotoNext(MoveType.After, i => i.MatchLdfld<RoomCamera>("splitScreenMode"), i => i.MatchBrfalse(out hop)); // IL_014C
-                    c.GotoLabel(hop, MoveType.After);
+                    c.GotoNext(MoveType.After, i => i.MatchLdfld<RoomCamera>("splitScreenMode"), i => i.MatchBrtrue(out _)); // IL_014C
                     c.MoveAfterLabels();
                     c.Emit(OpCodes.Ldarg_0); // RoomCamera
                     c.EmitDelegate<Func<float, RoomCamera, float>>((v, rc) =>
@@ -387,11 +386,11 @@ namespace SplitScreenCoop
                 }
                 catch (Exception e)
                 {
-                    Debug.LogException(new Exception("Couldn't IL-hook RoomCamera_Update1 from SplitScreenMod, inner spot", e)); // deffendisve progrmanig
+                    Logger.LogError(new Exception("Couldn't IL-hook RoomCamera_Update1 from SplitScreenMod, inner spot", e)); // deffendisve progrmanig
                     throw;
                 }
             }
-            else Debug.LogException(new Exception("Couldn't IL-hook RoomCamera_Update1 from SplitScreenMod")); // deffendisve progrmanig
+            else Logger.LogError(new Exception("Couldn't IL-hook RoomCamera_Update1 from SplitScreenMod")); // deffendisve progrmanig
         }
 
         // proper scroll and boundaries for our custom split modes. Originally only supported horiz split
@@ -404,7 +403,7 @@ namespace SplitScreenCoop
                 i => i.MatchLdarg(0),
                 i => i.MatchLdfld<RoomCamera>("voidSeaMode"),
                 i => i.MatchBrtrue(out jump),
-                i => i.MatchLdloca(0)
+                i => i.MatchLdloca(out _)
                 ))
             {
                 var b = c.Index;
@@ -439,9 +438,7 @@ namespace SplitScreenCoop
                             return v;
                         });
 
-                        ILLabel hop = null;
-                        c.GotoNext(MoveType.After, i => i.MatchLdfld<RoomCamera>("splitScreenMode"), i => i.MatchBrfalse(out hop)); // IL_0116
-                        c.GotoLabel(hop, MoveType.After);
+                        c.GotoNext(MoveType.After, i => i.MatchLdfld<RoomCamera>("splitScreenMode"), i => i.MatchBrtrue(out _)); // IL_0116
                         c.MoveAfterLabels();
                         c.Emit(OpCodes.Ldarg_0); // RoomCamera
                         c.EmitDelegate<Func<float, RoomCamera, float>>((v, rc) =>
@@ -454,8 +451,7 @@ namespace SplitScreenCoop
                         });
 
 
-                        c.GotoNext(MoveType.After, i => i.MatchLdfld<RoomCamera>("splitScreenMode"), i => i.MatchBrfalse(out hop)); // IL_014C
-                        c.GotoLabel(hop, MoveType.After);
+                        c.GotoNext(MoveType.After, i => i.MatchLdfld<RoomCamera>("splitScreenMode"), i => i.MatchBrtrue(out _)); // IL_014C
                         c.MoveAfterLabels();
                         c.Emit(OpCodes.Ldarg_0); // RoomCamera
                         c.EmitDelegate<Func<float, RoomCamera, float>>((v, rc) =>
@@ -469,13 +465,13 @@ namespace SplitScreenCoop
                     }
                     catch (Exception e)
                     {
-                        Debug.LogException(new Exception("Couldn't IL-hook RoomCamera_DrawUpdate1 from SplitScreenMod, inner inner spot", e)); // deffendisve progrmanig
+                        Logger.LogError(new Exception("Couldn't IL-hook RoomCamera_DrawUpdate1 from SplitScreenMod, inner inner spot", e)); // deffendisve progrmanig
                         throw;
                     }
                 }
-                else Debug.LogException(new Exception("Couldn't IL-hook RoomCamera_DrawUpdate1 from SplitScreenMod, inner spot")); // deffendisve progrmanig
+                else Logger.LogError(new Exception("Couldn't IL-hook RoomCamera_DrawUpdate1 from SplitScreenMod, inner spot")); // deffendisve progrmanig
             }
-            else Debug.LogException(new Exception("Couldn't IL-hook RoomCamera_DrawUpdate1 from SplitScreenMod")); // deffendisve progrmanig
+            else Logger.LogError(new Exception("Couldn't IL-hook RoomCamera_DrawUpdate1 from SplitScreenMod")); // deffendisve progrmanig
         }
     }
 }
