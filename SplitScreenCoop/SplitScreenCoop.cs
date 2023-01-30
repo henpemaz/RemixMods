@@ -12,6 +12,8 @@ using MonoMod.RuntimeDetour.HookGen;
 using MonoMod.Cil;
 using Mono.Cecil.Cil;
 using System.IO;
+using System.Security.Cryptography;
+using BepInEx.Logging;
 
 [module: UnverifiableCode]
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -22,13 +24,17 @@ namespace SplitScreenCoop
     [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.0")]
     public partial class SplitScreenCoop : BaseUnityPlugin
     {
+
+        
         public void OnEnable()
         {
+            sLogger = Logger;
             On.RainWorld.OnModsInit += OnModsInit;
 
             // need this early
             On.Futile.Init += Futile_Init; // turn on splitscreen
             On.Futile.UpdateCameraPosition += Futile_UpdateCameraPosition; // handle custom switcheroos
+            On.FScreen.ReinitRenderTexture += FScreen_ReinitRenderTexture; // new tech huh
 
             confPreferedSplitMode = Config.Bind("General",
                                          "preferedSplitMode",
@@ -53,6 +59,7 @@ namespace SplitScreenCoop
         public static SplitMode CurrentSplitMode;
         public static SplitMode preferedSplitMode = SplitMode.SplitVertical;
         public static bool alwaysSplit;
+        public static Camera[] fcameras = new Camera[2];
         public static Vector2[] camOffsets = new Vector2[] { new Vector2(0, 0), new Vector2(32000, 0), new Vector2(0, 32000), new Vector2(32000, 32000) }; // one can dream
 
         static int curCamera = -1;
@@ -61,6 +68,8 @@ namespace SplitScreenCoop
         private bool init;
 
         float offset;
+        private static ManualLogSource sLogger;
+
         void Update() // debug thinghies
         {
             if (Input.GetKeyDown("f8"))
@@ -187,49 +196,39 @@ namespace SplitScreenCoop
 
         private void Futile_Init(On.Futile.orig_Init orig, Futile self, FutileParams futileParams)
         {
-            self.splitScreen = true; // init 2 cams
             orig(self, futileParams);
-            self.splitScreen = false; // keep only one working for now
+            self._cameraHolder2 = new GameObject();
+            self._cameraHolder2.transform.parent = self.gameObject.transform;
+            self._camera2 = self._cameraHolder2.AddComponent<Camera>();
+            self.InitCamera(self._camera2, 2);
+            
+            fcameras = new Camera[] { self.camera, self.camera2 };
+
             self.camera2.enabled = false;
             self.UpdateCameraPosition();
+        }
+
+        private void FScreen_ReinitRenderTexture(On.FScreen.orig_ReinitRenderTexture orig, FScreen self, int displayWidth)
+        {
+            orig(self, displayWidth);
+
+            foreach (var l in cameraListeners)
+            {
+                l?.ReinitRenderTexture();
+            }
         }
 
         private void Futile_UpdateCameraPosition(On.Futile.orig_UpdateCameraPosition orig, Futile self)
         {
             orig(self);
 
-            if (CurrentSplitMode == SplitMode.SplitHorizontal)
+            for (int i = 0; i < fcameras.Length; i++)
             {
-                self.splitScreen = true;
-                self.camera2.enabled = true;
-                self._camera.orthographicSize = Futile.screen.pixelHeight / 2f * Futile.displayScaleInverse * 0.5f;
-                self._camera.rect = new Rect(0f, 0.5f, 1f, 1f);
-                self._camera2.orthographicSize = Futile.screen.pixelHeight / 2f * Futile.displayScaleInverse * 0.5f;
-                self._camera2.rect = new Rect(0f, 0f, 1f, 0.5f);
-                var offset = camOffsets[1];
+                if (fcameras[i] == null) break;
+                var offset = camOffsets[i];
                 var x = (Futile.screen.originX - 0.5f) * -Futile.screen.pixelWidth * Futile.displayScaleInverse + Futile.screenPixelOffset.x + offset.x;
                 var y = (Futile.screen.originY - 0.5f) * -Futile.screen.pixelHeight * Futile.displayScaleInverse - Futile.screenPixelOffset.y + offset.y;
-                self._camera2.transform.position = new Vector3(x, y, -10f);
-            }
-            else if (CurrentSplitMode == SplitMode.SplitVertical)
-            {
-                self.splitScreen = true;
-                self.camera2.enabled = true;
-                self._camera.orthographicSize = Futile.screen.pixelHeight / 2f * Futile.displayScaleInverse * 1f;
-                self._camera.rect = new Rect(0f, 0f, 0.5f, 1f);
-                self._camera2.orthographicSize = Futile.screen.pixelHeight / 2f * Futile.displayScaleInverse * 1f;
-                self._camera2.rect = new Rect(0.5f, 0f, 1f, 1f);
-                var offset = camOffsets[1];
-                var x = (Futile.screen.originX - 0.5f) * -Futile.screen.pixelWidth * Futile.displayScaleInverse + Futile.screenPixelOffset.x + offset.x;
-                var y = (Futile.screen.originY - 0.5f) * -Futile.screen.pixelHeight * Futile.displayScaleInverse - Futile.screenPixelOffset.y + offset.y;
-                self._camera2.transform.position = new Vector3(x, y, -10f);
-            }
-            else
-            {
-                self._camera.orthographicSize = Futile.screen.pixelHeight / 2f * Futile.displayScaleInverse * 1f;
-                self._camera.rect = new Rect(0f, 0f, 1f, 1f);
-                self.camera2.enabled = false;
-                self.splitScreen = false;
+                fcameras[i].transform.position = new Vector3(x, y, -10f);
             }
         }
 
@@ -267,6 +266,7 @@ namespace SplitScreenCoop
             manager.rainWorld.setup.player2 = true;
             manager.rainWorld.setup.player3 = true;
             manager.rainWorld.setup.player4 = true;
+            // manager.rainWorld.setup.startMap = "SU_S01";
 
             preferedSplitMode = confPreferedSplitMode.Value;
             alwaysSplit = confAlwaysSplit.Value;
@@ -294,7 +294,7 @@ namespace SplitScreenCoop
             }
 
             CurrentSplitMode = SplitMode.NoSplit;
-            Futile.instance.UpdateCameraPosition();
+            //Futile.instance.UpdateCameraPosition();
 
             SetSplitMode(alwaysSplit ? preferedSplitMode : SplitMode.NoSplit, self);
         }
@@ -303,22 +303,14 @@ namespace SplitScreenCoop
         private void RoomCamera_ctor1(On.RoomCamera.orig_ctor orig, RoomCamera self, RainWorldGame game, int cameraNumber)
         {
             orig(self, game, cameraNumber);
-            if (cameraNumber == 0)
-            {
-                if (cameraListeners[0] != null) cameraListeners[0].Destroy();
-                cameraListeners[0] = Futile.instance._cameraHolder.AddComponent<CameraListener>();
-                cameraListeners[0].roomCamera = self;
-            }
-            else
-            {
-                if (cameraListeners[1] != null) cameraListeners[1].Destroy();
-                cameraListeners[1] = Futile.instance._cameraHolder2.AddComponent<CameraListener>();
-                cameraListeners[1].roomCamera = self;
-                foreach (var c in self.SpriteLayers) c.SetPosition(camOffsets[self.cameraNumber]);
-                self.offset = Vector2.zero; // nulla zero niente don't use it
-                // so many drawables don't ever fucking move or don't take into account the offset its infuriating
-                // so we don't relly on any of that
-            }
+            if (cameraListeners[cameraNumber] != null) cameraListeners[cameraNumber].Destroy();
+            var listener = fcameras[cameraNumber].gameObject.AddComponent<CameraListener>();
+            cameraListeners[cameraNumber] = listener;
+            listener.AttachTo(self);
+            foreach (var c in self.SpriteLayers) c.SetPosition(camOffsets[self.cameraNumber]);
+            self.offset = Vector2.zero; // nulla zero niente don't use it
+                                        // so many drawables don't ever fucking move or don't take into account the offset its infuriating
+                                        // so we don't relly on any of that
         }
 
         private void RainWorldGame_ShutDownProcess(On.RainWorldGame.orig_ShutDownProcess orig, RainWorldGame self)
@@ -362,14 +354,37 @@ namespace SplitScreenCoop
 
         public void SetSplitMode(SplitMode split, RainWorldGame game)
         {
-            if (game.cameras.Length > 1 && split != CurrentSplitMode)
+            if (game.cameras.Length > 1)
             {
                 var main = game.cameras[0];
                 var other = game.cameras[1];
                 CurrentSplitMode = split;
                 OffsetHud(main);
                 OffsetHud(other);
-                Futile.instance.UpdateCameraPosition();
+
+                if (CurrentSplitMode == SplitMode.NoSplit)
+                {
+                    for (int i = 1; i < fcameras.Length; i++)
+                    {
+                        fcameras[i].enabled = false;
+                    }
+                    cameraListeners[0].skip = true;
+                    cameraListeners[0].SetMap(new Rect(0f, 0f, 1f, 1f), new Rect(0f, 0f, 1f, 1f));
+                }
+                else if (CurrentSplitMode == SplitMode.SplitHorizontal)
+                {
+                    cameraListeners[0].SetMap(new Rect(0f, 0.25f, 1f, 0.5f), new Rect(0f, 0.5f, 1f, 0.5f));
+                    cameraListeners[0].skip = false;
+                    fcameras[1].enabled = true;
+                    cameraListeners[1].SetMap(new Rect(0f, 0.25f, 1f, 0.5f), new Rect(0f, 0f, 1f, 0.5f));
+                }
+                else if (CurrentSplitMode == SplitMode.SplitVertical)
+                {
+                    cameraListeners[0].SetMap(new Rect(0.25f, 0f, 0.5f, 1f), new Rect(0f, 0f, 0.5f, 1f));
+                    cameraListeners[0].skip = false;
+                    fcameras[1].enabled = true;
+                    cameraListeners[1].SetMap(new Rect(0.25f, 0f, 0.5f, 1f), new Rect(0.5f, 0f, 0.5f, 1f));
+                }
             }
         }
 
@@ -504,24 +519,24 @@ namespace SplitScreenCoop
             orig(propertyName, vec);
             if (curCamera >= 0 && cameraListeners[curCamera] is CameraListener l)
             {
-                if (CurrentSplitMode != SplitMode.NoSplit)
-                {
-                    if (propertyName == "_spriteRect")
-                    {
-                        int a = CurrentSplitMode == SplitMode.SplitHorizontal ? 1 : 0;
-                        int b = CurrentSplitMode == SplitMode.SplitHorizontal ? 3 : 2;
-                        vec[a] = vec[a] * 2f - 0.5f;
-                        vec[b] = vec[b] * 2f - 0.5f;
-                        //vec[a] = vec[a] - 0.25f;
-                        //vec[b] = vec[b] - 0.25f;
-                        //vec[a] = vec[a] + offset;
-                        //vec[b] = vec[b] + offset;
-                    }
-                    //else if (propertyName == "_camInRoomRect")
-                    //{
-                    //    vec[CurrentSplitMode == SplitMode.SplitHorizontal ? 3 : 2] /= 2f;
-                    //}
-                }
+                //if (CurrentSplitMode != SplitMode.NoSplit)
+                //{
+                //    if (propertyName == "_spriteRect")
+                //    {
+                //        int a = CurrentSplitMode == SplitMode.SplitHorizontal ? 1 : 0;
+                //        int b = CurrentSplitMode == SplitMode.SplitHorizontal ? 3 : 2;
+                //        vec[a] = vec[a] * 2f - 0.5f;
+                //        vec[b] = vec[b] * 2f - 0.5f;
+                //        //vec[a] = vec[a] - 0.25f;
+                //        //vec[b] = vec[b] - 0.25f;
+                //        //vec[a] = vec[a] + offset;
+                //        //vec[b] = vec[b] + offset;
+                //    }
+                //    //else if (propertyName == "_camInRoomRect")
+                //    //{
+                //    //    vec[CurrentSplitMode == SplitMode.SplitHorizontal ? 3 : 2] /= 2f;
+                //    //}
+                //}
                 l.ShaderVectors[propertyName] = vec;
             }
         }
@@ -549,10 +564,34 @@ namespace SplitScreenCoop
         public class CameraListener : MonoBehaviour
         {
             public RoomCamera roomCamera;
+            public RenderTexture renderTexture;
             public Dictionary<string, Color> ShaderColors = new Dictionary<string, Color>();
             public Dictionary<string, Vector4> ShaderVectors = new Dictionary<string, Vector4>();
             public Dictionary<string, float> ShaderFloats = new Dictionary<string, float>();
             public Dictionary<string, Texture> ShaderTextures = new Dictionary<string, Texture>();
+            private Rect sourceRect;
+            private Rect targetRect;
+            private bool mapped;
+            private bool _skip;
+            private int srcX;
+            private int srcY;
+            private int srcWidth;
+            private int srcHeight;
+            private int dstX;
+            private int dstY;
+
+            public bool skip
+            {
+                get => _skip; internal set
+                {
+                    _skip = value;
+                    if (roomCamera != null)
+                    {
+                        sLogger.LogWarning("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + "  set skip " + value);
+                        fcameras[roomCamera.cameraNumber].targetTexture = _skip ? Futile.screen.renderTexture : this.renderTexture;
+                    }
+                }
+            }
 
             void OnPreRender()
             {
@@ -566,13 +605,77 @@ namespace SplitScreenCoop
             {
                 ShaderTextures.Clear();
                 roomCamera = null;
+                if (renderTexture != null)
+                {
+                    renderTexture.Release();
+                    renderTexture.DiscardContents();
+                    renderTexture = null;
+                }
             }
 
             public void Destroy()
             {
                 ShaderTextures.Clear();
                 roomCamera = null;
+                if (renderTexture != null)
+                {
+                    renderTexture.Release();
+                    renderTexture.DiscardContents();
+                    renderTexture = null;
+                }
                 Destroy(this);
+            }
+
+            internal void ReinitRenderTexture()
+            {
+                sLogger.LogWarning("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + "  ReinitRenderTexture");
+                if (renderTexture != null)
+                {
+                    renderTexture.Release();
+                    renderTexture.DiscardContents();
+                }
+                renderTexture = new RenderTexture(Futile.screen.renderTexture);
+                if (mapped)
+                {
+                    SetMap(this.sourceRect, this.targetRect);
+                }
+            }
+
+            internal void AttachTo(RoomCamera self)
+            {
+                roomCamera = self;
+                sLogger.LogWarning("CameraListener attached to roomcamera #" + self.cameraNumber);
+                ReinitRenderTexture();
+                fcameras[self.cameraNumber].targetTexture = renderTexture;
+            }
+
+            internal void SetMap(Rect sourceRect, Rect targetRect)
+            {
+                sLogger.LogWarning("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + "  SetMap");
+                if (renderTexture != null)
+                {
+                    var h = renderTexture.height;
+                    var w = renderTexture.width;
+                    srcX = Mathf.FloorToInt(w * sourceRect.x);
+                    srcY = Mathf.FloorToInt(h * sourceRect.y);
+                    srcWidth = Mathf.FloorToInt(w * sourceRect.width);
+                    srcHeight = Mathf.FloorToInt(h * sourceRect.height);
+                    dstX = Mathf.FloorToInt(w * targetRect.x);
+                    dstY = Mathf.FloorToInt(h * targetRect.y);
+                }
+                this.sourceRect = sourceRect;
+                this.targetRect = targetRect;
+
+                mapped = true;
+            }
+
+            public void OnPostRender()
+            {
+                if (renderTexture != null && !_skip && mapped)
+                {
+                    //sLogger.LogWarning("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + "  Rendering");
+                    Graphics.CopyTexture(renderTexture, 0, 0, srcX, srcY, srcWidth, srcHeight, Futile.screen.renderTexture, 0, 0, dstX, dstY);
+                }
             }
         }
     }
