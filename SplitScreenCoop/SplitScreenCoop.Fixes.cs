@@ -8,8 +8,10 @@ namespace SplitScreenCoop
 {
     public partial class SplitScreenCoop
     {
-        // Dialogue centered and oncreen
-        private Vector2 DialogBox_DrawPos(On.HUD.DialogBox.orig_DrawPos orig, HUD.DialogBox self, float timeStacker)
+        /// <summary>
+        /// Dialogue centered and oncreen
+        /// </summary>
+        public Vector2 DialogBox_DrawPos(On.HUD.DialogBox.orig_DrawPos orig, HUD.DialogBox self, float timeStacker)
         {
             // maybe instead of cl.roomcamera we could go self.hud.camera ?
             if (CurrentSplitMode == SplitMode.SplitVertical && curCamera >= 0 && cameraListeners[curCamera] is CameraListener cl)
@@ -19,8 +21,10 @@ namespace SplitScreenCoop
             return orig(self, timeStacker);
         }
 
-        // reduce double audio
-        private void VirtualMicrophone_DrawUpdate(On.VirtualMicrophone.orig_DrawUpdate orig, VirtualMicrophone self, float timeStacker, float timeSpeed)
+        /// <summary>
+        /// reduce double audio
+        /// </summary>
+        public void VirtualMicrophone_DrawUpdate(On.VirtualMicrophone.orig_DrawUpdate orig, VirtualMicrophone self, float timeStacker, float timeSpeed)
         {
             if (self.camera.cameraNumber > 0 && self.camera.room == self.camera.game.cameras[0].room)
             {
@@ -35,9 +39,48 @@ namespace SplitScreenCoop
             orig(self, timeStacker, timeSpeed);
         }
 
-        bool rrNestedLock;
-        // Realizers work together
-        private bool RoomRealizer_CanAbstractizeRoom(On.RoomRealizer.orig_CanAbstractizeRoom orig, RoomRealizer self, RoomRealizer.RealizedRoomTracker tracker)
+        /// <summary>
+        /// Room realizers that aren't the main one skip re-assigning themselves to cameras[0].followcreature
+        /// </summary>
+        public void RoomRealizer_Update(ILContext il)
+        {
+            try
+            {
+                var c = new ILCursor(il);
+                c.GotoNext(MoveType.Before,
+                    i => i.MatchStfld<RoomRealizer>("followCreature"),
+                    i => i.MatchLdarg(0),
+                    i => i.MatchLdfld<RoomRealizer>("followCreature"));
+                c.Index++;
+                c.MoveAfterLabels();
+                var skip = c.MarkLabel();
+                c.GotoPrev(MoveType.Before,
+                    i => i.MatchLdarg(0),
+                    i => i.MatchLdarg(0),
+                    i => i.MatchLdfld<RoomRealizer>("world"));
+                c.Emit(OpCodes.Ldarg_0);
+                c.EmitDelegate((RoomRealizer self) =>
+                {
+                    if (self != self.world?.game?.roomRealizer)
+                    {
+                        return true;
+                    }
+                    return false;
+                });
+                c.Emit(OpCodes.Brtrue, skip);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e);
+                throw;
+            }
+        }
+
+        public bool rrNestedLock;
+        /// <summary>
+        /// Realizers work together
+        /// </summary>
+        public bool RoomRealizer_CanAbstractizeRoom(On.RoomRealizer.orig_CanAbstractizeRoom orig, RoomRealizer self, RoomRealizer.RealizedRoomTracker tracker)
         {
             var r = orig(self, tracker);
             if (!rrNestedLock && realizer2 != null) // if other exists, not recursive
@@ -56,8 +99,10 @@ namespace SplitScreenCoop
             return r;
         }
 
-        // Realizer2 in new world
-        private void OverWorld_WorldLoaded(On.OverWorld.orig_WorldLoaded orig, OverWorld self)
+        /// <summary>
+        /// Realizer2 in new world
+        /// </summary>
+        public void OverWorld_WorldLoaded(On.OverWorld.orig_WorldLoaded orig, OverWorld self)
         {
             orig(self);
             if (self.game.session.Players.Count < 2 || self.game.roomRealizer == null) return;
@@ -69,9 +114,11 @@ namespace SplitScreenCoop
             realizer2.realizeNeighborCandidates = self.game.roomRealizer.realizeNeighborCandidates;
         }
 
-        bool inpause; // non reentrant
-        // Make 2 pause
-        private void PauseMenu_ctor(On.Menu.PauseMenu.orig_ctor orig, Menu.PauseMenu self, ProcessManager manager, RainWorldGame game)
+        public bool inpause; // non reentrant
+        /// <summary>
+        /// Make 2 pause
+        /// </summary>
+        public void PauseMenu_ctor(On.Menu.PauseMenu.orig_ctor orig, Menu.PauseMenu self, ProcessManager manager, RainWorldGame game)
         {
             orig(self, manager, game);
 
@@ -110,23 +157,29 @@ namespace SplitScreenCoop
             }
         }
 
-        // Need to shut down two menus
-        private void PauseMenu_ShutDownProcess(On.Menu.PauseMenu.orig_ShutDownProcess orig, Menu.PauseMenu self)
+        /// <summary>
+        /// Need to shut down two pause menus
+        /// </summary>
+        public void PauseMenu_ShutDownProcess(On.Menu.PauseMenu.orig_ShutDownProcess orig, Menu.PauseMenu self)
         {
             orig(self);
             var otherpause = self.manager?.sideProcesses?.FirstOrDefault(t => t is Menu.PauseMenu);
             if (otherpause != null) self.manager.StopSideProcess(otherpause); // removes from sideprocesses list so this isnt a recursive loop
         }
 
-        // Hud is at an offset on splitscreen mode
-        private void RoomCamera_FireUpSinglePlayerHUD(On.RoomCamera.orig_FireUpSinglePlayerHUD orig, RoomCamera self, Player player)
+        /// <summary>
+        /// Hud is at an offset on splitscreen mode
+        /// </summary>
+        public void RoomCamera_FireUpSinglePlayerHUD(On.RoomCamera.orig_FireUpSinglePlayerHUD orig, RoomCamera self, Player player)
         {
             orig(self, player);
             OffsetHud(self);
         }
 
         public delegate bool delget_ShouldBeCulled(GraphicsModule gm);
-        // cull should account for more cams
+        /// <summary>
+        /// cull should account for more cams
+        /// </summary>
         public bool get_ShouldBeCulled(delget_ShouldBeCulled orig, GraphicsModule gm)
         {
             if (gm.owner.room.game.cameras.Length > 1)
@@ -138,8 +191,10 @@ namespace SplitScreenCoop
             return orig(gm);
         }
 
-        // water wont move all vertices if the camera is too far to the right, move everything at startup
-        private void Water_InitiateSprites(On.Water.orig_InitiateSprites orig, Water self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam)
+        /// <summary>
+        /// water wont move all vertices if the camera is too far to the right, move everything at startup
+        /// </summary>
+        public void Water_InitiateSprites(On.Water.orig_InitiateSprites orig, Water self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam)
         {
             orig(self, sLeaser, rCam);
             if (CurrentSplitMode != SplitMode.NoSplit)
@@ -165,8 +220,10 @@ namespace SplitScreenCoop
             }
         }
 
-        // implements following player for cam2
-        private void ShortcutHandler_Update(ILContext il)
+        /// <summary>
+        /// implements following player for cam2
+        /// </summary>
+        public void ShortcutHandler_Update(ILContext il)
         {
             var c = new ILCursor(il);
             int indexLoc = 0;
@@ -230,8 +287,10 @@ namespace SplitScreenCoop
             else Logger.LogError(new Exception("Couldn't IL-hook ShortcutHandler_Update part 3 MoveCamera from SplitScreenMod")); // deffendisve progrmanig
         }
 
-        // activating a room should add it to the tracked active rooms
-        private void ShortcutHandler_SuckInCreature(ILContext il)
+        /// <summary>
+        /// activating a room should add it to the tracked active rooms
+        /// </summary>
+        public void ShortcutHandler_SuckInCreature(ILContext il)
         {
             var c = new ILCursor(il);
             // this is actually loading and entering the room, should add to tracked rooms, cmon game
@@ -249,8 +308,10 @@ namespace SplitScreenCoop
             else Logger.LogError(new Exception("Couldn't IL-hook ShortcutHandler_SuckInCreature AddNewTrackedRoom from SplitScreenMod")); // deffendisve progrmanig
         }
 
-        // fixes draw parameter changing on repeated calls to init, would array-oob on the previous leaser
-        private void PoleMimicGraphics_InitiateSprites(ILContext il)
+        /// <summary>
+        /// fixes draw parameter changing on repeated calls to init, would array-oob on the previous leaser
+        /// </summary>
+        public void PoleMimicGraphics_InitiateSprites(ILContext il)
         {
             var c = new ILCursor(il);
 
@@ -267,8 +328,10 @@ namespace SplitScreenCoop
             else Logger.LogError(new Exception("Couldn't IL-hook PoleMimicGraphics_InitiateSprites from SplitScreenMod")); // deffendisve progrmanig
         }
 
-        // fixes fsprite names so they can use different textures
-        private void RoomCamera_ctor(ILContext il)
+        /// <summary>
+        /// fixes fsprite names so they can use different textures
+        /// </summary>
+        public void RoomCamera_ctor(ILContext il)
         {
             var c = new ILCursor(il);
             if (c.TryGotoNext(MoveType.Before,
@@ -287,8 +350,10 @@ namespace SplitScreenCoop
             else Logger.LogError(new Exception("Couldn't IL-hook RoomCamera_ctor from SplitScreenMod")); // deffendisve progrmanig
         }
 
-        // proper scroll and boundaries for our custom split modes. Originally only supported horiz split
-        private void RoomCamera_Update1(ILContext il)
+        /// <summary>
+        /// proper scroll and boundaries for our custom split modes. Originally only supported horiz split
+        /// </summary>
+        public void RoomCamera_Update1(ILContext il)
         {
             var c = new ILCursor(il);
             ILLabel jump = null;
@@ -402,8 +467,10 @@ namespace SplitScreenCoop
             else Logger.LogError(new Exception("Couldn't IL-hook RoomCamera_Update1 from SplitScreenMod")); // deffendisve progrmanig
         }
 
-        // proper scroll and boundaries for our custom split modes. Originally only supported horiz split
-        private void RoomCamera_DrawUpdate1(ILContext il)
+        /// <summary>
+        /// proper scroll and boundaries for our custom split modes. Originally only supported horiz split
+        /// </summary>
+        public void RoomCamera_DrawUpdate1(ILContext il)
         {
             var c = new ILCursor(il);
             ILLabel jump = null;

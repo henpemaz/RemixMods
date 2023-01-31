@@ -4,9 +4,19 @@ menu
 	preferred split mode dropdown
 
 fix realizer2
+	done
 
 sleep (and wake up) in different shelters
+	food conditions check and fix
+
+	store shelter of player2
+
+	place player2 in stored shelter
+
+	player2 starving =/= player1 starving
 
 karma loss if all die, no change if one survives, gain if "most" survive
+
+smooth camera follow a little
 
 3 and 4 cameras

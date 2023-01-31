@@ -5,64 +5,12 @@ namespace SplitScreenCoop
 {
     public partial class SplitScreenCoop
     {
-        // Init unity camera 2
-        private void Futile_Init(On.Futile.orig_Init orig, Futile self, FutileParams futileParams)
+        //Envelop camera-related stuff that does shader.set calls so we know the calling camera index and can re-apply those in a sane way later
+        //not 100% robust (currently we don't store "global" assignments that one camera might choose to overwrite or not)
+
+        public void RoomCamera_MoveCamera_Room_int(On.RoomCamera.orig_MoveCamera_Room_int orig, RoomCamera self, Room newRoom, int camPos)
         {
-            orig(self, futileParams);
-            self._cameraHolder2 = new GameObject();
-            self._cameraHolder2.transform.parent = self.gameObject.transform;
-            self._camera2 = self._cameraHolder2.AddComponent<Camera>();
-            self.InitCamera(self._camera2, 2);
-
-            fcameras = new Camera[] { self.camera, self.camera2 };
-
-            self.camera2.enabled = false;
-            self.UpdateCameraPosition();
-        }
-
-        // CameraListeners need to keep up
-        private void FScreen_ReinitRenderTexture(On.FScreen.orig_ReinitRenderTexture orig, FScreen self, int displayWidth)
-        {
-            orig(self, displayWidth);
-
-            foreach (var l in cameraListeners)
-            {
-                l?.ReinitRenderTexture();
-            }
-        }
-
-        // Apply better offsets in multicam mode
-        private void Futile_UpdateCameraPosition(On.Futile.orig_UpdateCameraPosition orig, Futile self)
-        {
-            orig(self);
-
-            for (int i = 0; i < fcameras.Length; i++)
-            {
-                if (fcameras[i] == null) continue;
-                var offset = camOffsets[i];
-                var x = (Futile.screen.originX - 0.5f) * -Futile.screen.pixelWidth * Futile.displayScaleInverse + Futile.screenPixelOffset.x + offset.x;
-                var y = (Futile.screen.originY - 0.5f) * -Futile.screen.pixelHeight * Futile.displayScaleInverse - Futile.screenPixelOffset.y + offset.y;
-                fcameras[i].transform.position = new Vector3(x, y, -10f);
-            }
-        }
-
-        private void RoomCamera_DrawUpdate(On.RoomCamera.orig_DrawUpdate orig, RoomCamera self, float timeStacker, float timeSpeed)
-        {
-            var prev = curCamera;
-            try
-            {
-                curCamera = self.cameraNumber;
-                orig(self, timeStacker, timeSpeed);
-            }
-            finally
-            {
-                curCamera = prev;
-            }
-        }
-
-        private void RoomCamera_MoveCamera_Room_int(On.RoomCamera.orig_MoveCamera_Room_int orig, RoomCamera self, Room newRoom, int camPos)
-        {
-            ConsiderColapsing(self.game);
+            ConsiderColapsing(self.game); // this one is special
 
             var prev = curCamera;
             try
@@ -76,7 +24,7 @@ namespace SplitScreenCoop
             }
         }
 
-        private void RoomCamera_MoveCamera_int(On.RoomCamera.orig_MoveCamera_int orig, RoomCamera self, int camPos)
+        public void RoomCamera_MoveCamera_int(On.RoomCamera.orig_MoveCamera_int orig, RoomCamera self, int camPos)
         {
             var prev = curCamera;
             try
@@ -90,7 +38,21 @@ namespace SplitScreenCoop
             }
         }
 
-        private void RoomCamera_Update(On.RoomCamera.orig_Update orig, RoomCamera self)
+        public void RoomCamera_DrawUpdate(On.RoomCamera.orig_DrawUpdate orig, RoomCamera self, float timeStacker, float timeSpeed)
+        {
+            var prev = curCamera;
+            try
+            {
+                curCamera = self.cameraNumber;
+                orig(self, timeStacker, timeSpeed);
+            }
+            finally
+            {
+                curCamera = prev;
+            }
+        }
+
+        public void RoomCamera_Update(On.RoomCamera.orig_Update orig, RoomCamera self)
         {
             var prev = curCamera;
             try

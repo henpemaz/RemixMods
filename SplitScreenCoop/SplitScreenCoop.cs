@@ -43,8 +43,8 @@ namespace SplitScreenCoop
                                          "Permanent split mode");
         }
 
-        private ConfigEntry<SplitMode> confPreferedSplitMode;
-        private ConfigEntry<bool> confAlwaysSplit;
+        public ConfigEntry<SplitMode> confPreferedSplitMode;
+        public ConfigEntry<bool> confAlwaysSplit;
 
         public enum SplitMode
         {
@@ -59,14 +59,15 @@ namespace SplitScreenCoop
         public static Camera[] fcameras = new Camera[2];
         public static Vector2[] camOffsets = new Vector2[] { new Vector2(0, 0), new Vector2(32000, 0), new Vector2(0, 32000), new Vector2(32000, 32000) }; // one can dream
 
-        static int curCamera = -1;
+        public static int curCamera = -1;
         public static CameraListener[] cameraListeners = new CameraListener[2];
         public static RoomRealizer realizer2;
-        private bool init;
+        public bool init;
 
-        private static ManualLogSource sLogger;
+        public static ManualLogSource sLogger;
+        public bool selfSufficientCoop;
 
-        void Update()
+        public void Update()
         {
             if (Input.GetKeyDown("f8"))
             {
@@ -78,12 +79,15 @@ namespace SplitScreenCoop
             }
         }
 
-        private void OnModsInit(On.RainWorld.orig_OnModsInit orig, RainWorld self)
+        public void OnModsInit(On.RainWorld.orig_OnModsInit orig, RainWorld self)
         {
             try
             {
                 if (init) return;
                 init = true;
+
+                IL.RainWorldGame.ctor += RainWorldGame_ctor1;
+                On.RainWorldGame.ctor += RainWorldGame_ctor; // make roomcam2, follow fix
 
                 On.RoomCamera.ctor += RoomCamera_ctor1; // bind cam to camlistener
                 On.RainWorldGame.Update += RainWorldGame_Update; // split unsplit
@@ -103,12 +107,9 @@ namespace SplitScreenCoop
                 On.Water.InitiateSprites += Water_InitiateSprites; // move water somewhere near final position
                 On.VirtualMicrophone.DrawUpdate += VirtualMicrophone_DrawUpdate; // mic from 2nd cam should not pic up while on same cam
                 On.HUD.DialogBox.DrawPos += DialogBox_DrawPos; // center dialog in half screen
+                IL.RoomRealizer.Update += RoomRealizer_Update;
                 On.RoomRealizer.CanAbstractizeRoom += RoomRealizer_CanAbstractizeRoom;
 
-                IL.RainWorldGame.ctor += RainWorldGame_ctor1;
-                On.RainWorldGame.ctor += RainWorldGame_ctor; // make roomcam2, follow fix
-
-                // fixes in fixes file
                 IL.RoomCamera.ctor += RoomCamera_ctor; // create sprite with the right name
                 IL.RoomCamera.Update += RoomCamera_Update1; // follow critter, clamp to proper values
                 IL.RoomCamera.DrawUpdate += RoomCamera_DrawUpdate1; // clamp to proper values
@@ -130,7 +131,6 @@ namespace SplitScreenCoop
                     typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalFloat"), this);
                 new Hook(typeof(Shader).GetMethod("SetGlobalTexture", new Type[] { typeof(string), typeof(Texture) }),
                     typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalTexture"), this);
-
             }
             catch (Exception e)
             {
@@ -140,11 +140,62 @@ namespace SplitScreenCoop
             finally
             {
                 orig(self);
+                selfSufficientCoop = !ModManager.JollyCoop;
             }
         }
 
-        // Hookpoint for loading in more cameras, right before first room force-loads
-        private void RainWorldGame_ctor1(ILContext il)
+        /// <summary>
+        /// Init unity camera 2
+        /// </summary>
+        public void Futile_Init(On.Futile.orig_Init orig, Futile self, FutileParams futileParams)
+        {
+            orig(self, futileParams);
+            self._cameraHolder2 = new GameObject();
+            self._cameraHolder2.transform.parent = self.gameObject.transform;
+            self._camera2 = self._cameraHolder2.AddComponent<Camera>();
+            self.InitCamera(self._camera2, 2);
+
+            fcameras = new Camera[] { self.camera, self.camera2 };
+
+            self.camera2.enabled = false;
+            self.UpdateCameraPosition();
+        }
+
+        /// <summary>
+        /// CameraListeners need to keep up
+        /// </summary>
+        public void FScreen_ReinitRenderTexture(On.FScreen.orig_ReinitRenderTexture orig, FScreen self, int displayWidth)
+        {
+            orig(self, displayWidth);
+
+            foreach (var l in cameraListeners)
+            {
+                l?.ReinitRenderTexture();
+            }
+        }
+
+        /// <summary>
+        /// Apply better offsets in multicam mode
+        /// </summary>
+        public void Futile_UpdateCameraPosition(On.Futile.orig_UpdateCameraPosition orig, Futile self)
+        {
+            orig(self);
+
+            for (int i = 0; i < fcameras.Length; i++)
+            {
+                if (fcameras[i] == null) continue;
+                var offset = camOffsets[i];
+                var x = (Futile.screen.originX - 0.5f) * -Futile.screen.pixelWidth * Futile.displayScaleInverse + Futile.screenPixelOffset.x + offset.x;
+                var y = (Futile.screen.originY - 0.5f) * -Futile.screen.pixelHeight * Futile.displayScaleInverse - Futile.screenPixelOffset.y + offset.y;
+                fcameras[i].transform.position = new Vector3(x, y, -10f);
+            }
+        }
+
+
+        /// <summary>
+        /// Hookpoint for loading in more cameras, right before first room force-loads
+        /// </summary>
+        public void RainWorldGame_ctor1(ILContext il)
         {
             var c = new ILCursor(il);
             if (c.TryGotoNext(MoveType.Before,
@@ -173,9 +224,15 @@ namespace SplitScreenCoop
             else Logger.LogError(new Exception("Couldn't IL-hook RainWorldGame_ctor1 from SplitScreenMod")); // deffendisve progrmanig
         }
 
-        private void RainWorldGame_ctor(On.RainWorldGame.orig_ctor orig, RainWorldGame self, ProcessManager manager)
+        /// <summary>
+        /// Setups, cleanups, move cam2, realizer2, set initial split mode
+        /// </summary>
+        public void RainWorldGame_ctor(On.RainWorldGame.orig_ctor orig, RainWorldGame self, ProcessManager manager)
         {
-            manager.rainWorld.setup.player2 = true;
+            if (selfSufficientCoop)
+            {
+                manager.rainWorld.setup.player2 = true;
+            }
             // manager.rainWorld.setup.startMap = "SU_S01";
 
             preferedSplitMode = confPreferedSplitMode.Value;
@@ -207,8 +264,10 @@ namespace SplitScreenCoop
             SetSplitMode(alwaysSplit ? preferedSplitMode : SplitMode.NoSplit, self);
         }
 
-        // adds a listener for render events so shader globals can be set
-        private void RoomCamera_ctor1(On.RoomCamera.orig_ctor orig, RoomCamera self, RainWorldGame game, int cameraNumber)
+        /// <summary>
+        /// adds a listener for render events so shader globals can be set
+        /// </summary>
+        public void RoomCamera_ctor1(On.RoomCamera.orig_ctor orig, RoomCamera self, RainWorldGame game, int cameraNumber)
         {
             orig(self, game, cameraNumber);
             cameraListeners[cameraNumber]?.Destroy();
@@ -221,7 +280,10 @@ namespace SplitScreenCoop
                                         // so we don't relly on any of that
         }
 
-        private void RainWorldGame_ShutDownProcess(On.RainWorldGame.orig_ShutDownProcess orig, RainWorldGame self)
+        /// <summary>
+        /// Cleanup cameralisteners and realizers
+        /// </summary>
+        public void RainWorldGame_ShutDownProcess(On.RainWorldGame.orig_ShutDownProcess orig, RainWorldGame self)
         {
             SetSplitMode(SplitMode.NoSplit, self);
 
@@ -234,7 +296,10 @@ namespace SplitScreenCoop
             orig(self);
         }
 
-        private void RainWorldGame_Update(On.RainWorldGame.orig_Update orig, RainWorldGame self)
+        /// <summary>
+        /// Check for needed split mode changes, update realizers
+        /// </summary>
+        public void RainWorldGame_Update(On.RainWorldGame.orig_Update orig, RainWorldGame self)
         {
             orig(self);
             if (self.cameras.Length > 1)
@@ -260,6 +325,9 @@ namespace SplitScreenCoop
             realizer2?.Update();
         }
 
+        /// <summary>
+        /// Switches between split modes, only call from outside of camera-related code? untested if that actually breaks anything
+        /// </summary>
         public void SetSplitMode(SplitMode split, RainWorldGame game)
         {
             if (game.cameras.Length > 1)
@@ -296,20 +364,18 @@ namespace SplitScreenCoop
             }
         }
 
-        // following null or deleted or dead
-        private bool IsCamDead(RoomCamera cam)
-        {
-            return IsCreatureDead(cam.followAbstractCreature);
-        }
-
-        // null or dead or deleted
-        private bool IsCreatureDead(AbstractCreature critter)
+        /// <summary>
+        /// null or dead or deleted creature
+        /// </summary>
+        public bool IsCreatureDead(AbstractCreature critter)
         {
             return (critter?.state?.dead ?? true) || (critter?.realizedCreature?.slatedForDeletetion ?? true);
         }
 
-        // consider changing if someones dead or deleted
-        private void ConsiderColapsing(RainWorldGame game)
+        /// <summary>
+        /// consider changing camera targets if someones dead or deleted
+        /// </summary>
+        public void ConsiderColapsing(RainWorldGame game)
         {
             if (game.cameras.Length > 1)
             {
@@ -317,17 +383,20 @@ namespace SplitScreenCoop
                 foreach (var cam in game.cameras)
                 {
                     // if following dead critter, switch!
-                    if (IsCamDead(cam))
+                    if (IsCreatureDead(cam.followAbstractCreature))
                     {
                         if (cam.game.Players.ToArray().Reverse().FirstOrDefault(cr => !IsCreatureDead(cr))?.realizedCreature is Player p)
                             AssignCameraToPlayer(cam, p);
-                        else if (cam.game.cameras.FirstOrDefault(c => !IsCamDead(c))?.followAbstractCreature?.realizedCreature is Player pp)
+                        else if (cam.game.cameras.FirstOrDefault(c => !IsCreatureDead(c.followAbstractCreature))?.followAbstractCreature?.realizedCreature is Player pp)
                             AssignCameraToPlayer(cam, pp);
                     }
                 }
             }
         }
 
+        /// <summary>
+        /// Update camera.follow but also properly switch current room and hud owner
+        /// </summary>
         public void AssignCameraToPlayer(RoomCamera camera, Player player)
         {
             camera.followAbstractCreature = player.abstractCreature;
@@ -340,7 +409,10 @@ namespace SplitScreenCoop
             if (camera.hud != null) camera.hud.owner = player;
         }
 
-        private void OffsetHud(RoomCamera self)
+        /// <summary>
+        /// Move HUD onscreen for current split mode
+        /// </summary>
+        public void OffsetHud(RoomCamera self)
         {
             Vector2 offset = camOffsets[self.cameraNumber];
             if (CurrentSplitMode != SplitMode.NoSplit)

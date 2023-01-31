@@ -5,6 +5,11 @@ namespace SplitScreenCoop
 {
     public partial class SplitScreenCoop
     {
+        /// <summary>
+        /// Monobehavior that listen to camera events, so we can pre and post
+        /// We store per-room-camera shader values and apply them per-unity-camera
+        /// In split mode, Unity camera renders to an individual renderTexture and blits to the main tex post
+        /// </summary>
         public class CameraListener : MonoBehaviour
         {
             public RoomCamera roomCamera;
@@ -13,17 +18,20 @@ namespace SplitScreenCoop
             public Dictionary<string, Vector4> ShaderVectors = new Dictionary<string, Vector4>();
             public Dictionary<string, float> ShaderFloats = new Dictionary<string, float>();
             public Dictionary<string, Texture> ShaderTextures = new Dictionary<string, Texture>();
-            private Rect sourceRect;
-            private Rect targetRect;
-            private bool mapped;
-            private bool _skip;
-            private int srcX;
-            private int srcY;
-            private int srcWidth;
-            private int srcHeight;
-            private int dstX;
-            private int dstY;
+            public Rect sourceRect;
+            public Rect targetRect;
+            public bool mapped;
+            public bool _skip;
+            public int srcX;
+            public int srcY;
+            public int srcWidth;
+            public int srcHeight;
+            public int dstX;
+            public int dstY;
 
+            /// <summary>
+            /// bypass intermediate rendertexture and blit
+            /// </summary>
             public bool skip
             {
                 get => _skip; internal set
@@ -31,21 +39,13 @@ namespace SplitScreenCoop
                     _skip = value;
                     if (roomCamera != null)
                     {
-                        sLogger.LogWarning("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + "  set skip " + value);
+                        sLogger.LogInfo("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + " set skip " + value);
                         fcameras[roomCamera.cameraNumber].targetTexture = _skip ? Futile.screen.renderTexture : this.renderTexture;
                     }
                 }
             }
 
-            void OnPreRender()
-            {
-                foreach (var kv in ShaderColors) Shader.SetGlobalColor(kv.Key, kv.Value);
-                foreach (var kv in ShaderVectors) Shader.SetGlobalVector(kv.Key, kv.Value);
-                foreach (var kv in ShaderFloats) Shader.SetGlobalFloat(kv.Key, kv.Value);
-                foreach (var kv in ShaderTextures) Shader.SetGlobalTexture(kv.Key, kv.Value);
-            }
-
-            void OnDestroy()
+            public void OnDestroy()
             {
                 ShaderTextures.Clear();
                 roomCamera = null;
@@ -70,9 +70,9 @@ namespace SplitScreenCoop
                 Destroy(this);
             }
 
-            internal void ReinitRenderTexture()
+            public void ReinitRenderTexture()
             {
-                sLogger.LogWarning("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + "  ReinitRenderTexture");
+                sLogger.LogInfo("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + " ReinitRenderTexture");
                 if (renderTexture != null)
                 {
                     renderTexture.Release();
@@ -85,17 +85,23 @@ namespace SplitScreenCoop
                 }
             }
 
-            internal void AttachTo(RoomCamera self)
+            /// <summary>
+            /// Effectively ctor
+            /// </summary>
+            public void AttachTo(RoomCamera self)
             {
                 roomCamera = self;
-                sLogger.LogWarning("CameraListener attached to roomcamera #" + self.cameraNumber);
+                sLogger.LogInfo("CameraListener attached to roomcamera #" + self.cameraNumber);
                 ReinitRenderTexture();
                 fcameras[self.cameraNumber].targetTexture = renderTexture;
             }
 
-            internal void SetMap(Rect sourceRect, Rect targetRect)
+            /// <summary>
+            /// Camera.rect but for our custom blit
+            /// </summary>
+            public void SetMap(Rect sourceRect, Rect targetRect)
             {
-                sLogger.LogWarning("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + "  SetMap");
+                sLogger.LogInfo("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + " SetMap");
                 if (renderTexture != null)
                 {
                     var h = renderTexture.height;
@@ -113,11 +119,25 @@ namespace SplitScreenCoop
                 mapped = true;
             }
 
+            /// <summary>
+            /// Apply shader vars from this roomcamera
+            /// </summary>
+            public void OnPreRender()
+            {
+                foreach (var kv in ShaderColors) Shader.SetGlobalColor(kv.Key, kv.Value);
+                foreach (var kv in ShaderVectors) Shader.SetGlobalVector(kv.Key, kv.Value);
+                foreach (var kv in ShaderFloats) Shader.SetGlobalFloat(kv.Key, kv.Value);
+                foreach (var kv in ShaderTextures) Shader.SetGlobalTexture(kv.Key, kv.Value);
+            }
+
+            /// <summary>
+            /// Blit into display texture
+            /// </summary>
             public void OnPostRender()
             {
                 if (renderTexture != null && !_skip && mapped)
                 {
-                    //sLogger.LogWarning("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + "  Rendering");
+                    //sLogger.LogInfo("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + "  Rendering");
                     Graphics.CopyTexture(renderTexture, 0, 0, srcX, srcY, srcWidth, srcHeight, Futile.screen.renderTexture, 0, 0, dstX, dstY);
                 }
             }
