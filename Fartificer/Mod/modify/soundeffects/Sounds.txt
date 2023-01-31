@@ -1,0 +1,1 @@
+[ADD]fartificer_fart_with_reverb/rangeFac=2.5 : fartificerfartwithreverb/vol=0.8/pitch=0.75

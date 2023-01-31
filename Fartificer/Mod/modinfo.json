@@ -1,0 +1,11 @@
+{
+  "id": "henpemaz_fartificer",
+  "name": "Fartificer",
+  "version": "0.1.1",
+  "target_game_version": "v1.9",
+  "authors": "Henpemaz",
+  "description": "Replaces Artificer's ability sound effect with fart reverb sfx. Enjoy!",
+  "requirements": [ "moreslugcats" ],
+  "requirements_names": [ "More Slugcats Expansion" ],
+  "checksum_override_version": false
+}
