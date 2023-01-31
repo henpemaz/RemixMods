@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "target_game_version": "v1.9",
   "authors": "Henpemaz",
-  "description": "",
+  "description": "Two player co-op with splitscreen. Supports players splitting up far away and sleeping in different shelters.",
   "requirements": [],
   "requirements_names": [],
   "checksum_override_version": false

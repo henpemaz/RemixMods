@@ -1,9 +1,12 @@
-﻿Enable player 2
+﻿
+menu
+	player2 class dropdown
+	preferred split mode dropdown
 
-make player2 3 4 checkboxes
+fix realizer2
 
-make player2 class dropdown
-
-sleep in different shelters
+sleep (and wake up) in different shelters
 
 karma loss if all die, no change if one survives, gain if "most" survive
+
+3 and 4 cameras

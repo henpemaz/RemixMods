@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Security;
@@ -24,8 +23,6 @@ namespace SplitScreenCoop
     [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.0")]
     public partial class SplitScreenCoop : BaseUnityPlugin
     {
-
-        
         public void OnEnable()
         {
             sLogger = Logger;
@@ -67,10 +64,9 @@ namespace SplitScreenCoop
         public static RoomRealizer realizer2;
         private bool init;
 
-        float offset;
         private static ManualLogSource sLogger;
 
-        void Update() // debug thinghies
+        void Update()
         {
             if (Input.GetKeyDown("f8"))
             {
@@ -80,23 +76,6 @@ namespace SplitScreenCoop
                 if (CurrentSplitMode != SplitMode.NoSplit && GameObject.FindObjectOfType<RainWorld>()?.processManager?.currentMainLoop is RainWorldGame game)
                     SetSplitMode(preferedSplitMode, game);
             }
-
-            //if (Input.GetKeyDown("9"))
-            //{
-            //    if (GameObject.FindObjectOfType<RainWorld>()?.processManager?.currentMainLoop is RainWorldGame game) game.world.rainCycle.ArenaEndSessionRain();
-            //}
-
-            if (Input.GetKeyDown("1"))
-            {
-                offset += 0.125f;
-                Debug.Log(offset);
-            }
-
-            if (Input.GetKeyDown("2"))
-            {
-                offset -= 0.125f;
-                Debug.Log(offset);
-            }
         }
 
         private void OnModsInit(On.RainWorld.orig_OnModsInit orig, RainWorld self)
@@ -105,36 +84,6 @@ namespace SplitScreenCoop
             {
                 if (init) return;
                 init = true;
-
-                try
-                {
-                    string path = AssetManager.ResolveFilePath("AssetBundles" + Path.DirectorySeparatorChar + "splitscreenshaders");
-                    Logger.LogInfo(path);
-                    if (string.IsNullOrEmpty(path)) goto done;
-                    AssetBundle bundle = AssetBundle.LoadFromFile(path);
-                    Logger.LogInfo(bundle);
-                    if (bundle == null) goto done;
-
-                    Shader[] newShaders = bundle.LoadAllAssets<Shader>();
-                    foreach (Shader shader in newShaders)
-                    {
-                        Logger.LogInfo("found shader " + shader.name);
-                        //if(shader.name == "Futile/LevelColor") self.Shaders["LevelColor"].shader = shader;
-                        foreach (FShader oldshader in self.Shaders.Values)
-                        {
-                            if (oldshader.shader.name == shader.name) oldshader.shader = shader; // crazy talk
-                        }
-                    }
-                done:;
-                }
-                catch (Exception e)
-                {
-                    Logger.LogError(e);
-                    throw;
-                }
-
-                //On.Futile.Init += Futile_Init; // turn on splitscreen
-                //On.Futile.UpdateCameraPosition += Futile_UpdateCameraPosition; // handle custom switcheroos
 
                 On.RoomCamera.ctor += RoomCamera_ctor1; // bind cam to camlistener
                 On.RainWorldGame.Update += RainWorldGame_Update; // split unsplit
@@ -194,44 +143,7 @@ namespace SplitScreenCoop
             }
         }
 
-        private void Futile_Init(On.Futile.orig_Init orig, Futile self, FutileParams futileParams)
-        {
-            orig(self, futileParams);
-            self._cameraHolder2 = new GameObject();
-            self._cameraHolder2.transform.parent = self.gameObject.transform;
-            self._camera2 = self._cameraHolder2.AddComponent<Camera>();
-            self.InitCamera(self._camera2, 2);
-            
-            fcameras = new Camera[] { self.camera, self.camera2 };
-
-            self.camera2.enabled = false;
-            self.UpdateCameraPosition();
-        }
-
-        private void FScreen_ReinitRenderTexture(On.FScreen.orig_ReinitRenderTexture orig, FScreen self, int displayWidth)
-        {
-            orig(self, displayWidth);
-
-            foreach (var l in cameraListeners)
-            {
-                l?.ReinitRenderTexture();
-            }
-        }
-
-        private void Futile_UpdateCameraPosition(On.Futile.orig_UpdateCameraPosition orig, Futile self)
-        {
-            orig(self);
-
-            for (int i = 0; i < fcameras.Length; i++)
-            {
-                if (fcameras[i] == null) break;
-                var offset = camOffsets[i];
-                var x = (Futile.screen.originX - 0.5f) * -Futile.screen.pixelWidth * Futile.displayScaleInverse + Futile.screenPixelOffset.x + offset.x;
-                var y = (Futile.screen.originY - 0.5f) * -Futile.screen.pixelHeight * Futile.displayScaleInverse - Futile.screenPixelOffset.y + offset.y;
-                fcameras[i].transform.position = new Vector3(x, y, -10f);
-            }
-        }
-
+        // Hookpoint for loading in more cameras, right before first room force-loads
         private void RainWorldGame_ctor1(ILContext il)
         {
             var c = new ILCursor(il);
@@ -264,8 +176,6 @@ namespace SplitScreenCoop
         private void RainWorldGame_ctor(On.RainWorldGame.orig_ctor orig, RainWorldGame self, ProcessManager manager)
         {
             manager.rainWorld.setup.player2 = true;
-            manager.rainWorld.setup.player3 = true;
-            manager.rainWorld.setup.player4 = true;
             // manager.rainWorld.setup.startMap = "SU_S01";
 
             preferedSplitMode = confPreferedSplitMode.Value;
@@ -273,7 +183,7 @@ namespace SplitScreenCoop
 
             for (int i = 0; i < cameraListeners.Length; i++)
             {
-                if (cameraListeners[i] != null) cameraListeners[i].Destroy();
+                cameraListeners[i]?.Destroy();
                 cameraListeners[i] = null;
             }
             realizer2 = null;
@@ -294,8 +204,6 @@ namespace SplitScreenCoop
             }
 
             CurrentSplitMode = SplitMode.NoSplit;
-            //Futile.instance.UpdateCameraPosition();
-
             SetSplitMode(alwaysSplit ? preferedSplitMode : SplitMode.NoSplit, self);
         }
 
@@ -303,7 +211,7 @@ namespace SplitScreenCoop
         private void RoomCamera_ctor1(On.RoomCamera.orig_ctor orig, RoomCamera self, RainWorldGame game, int cameraNumber)
         {
             orig(self, game, cameraNumber);
-            if (cameraListeners[cameraNumber] != null) cameraListeners[cameraNumber].Destroy();
+            cameraListeners[cameraNumber]?.Destroy();
             var listener = fcameras[cameraNumber].gameObject.AddComponent<CameraListener>();
             cameraListeners[cameraNumber] = listener;
             listener.AttachTo(self);
@@ -315,11 +223,11 @@ namespace SplitScreenCoop
 
         private void RainWorldGame_ShutDownProcess(On.RainWorldGame.orig_ShutDownProcess orig, RainWorldGame self)
         {
-            CurrentSplitMode = SplitMode.NoSplit;
-            Futile.instance.UpdateCameraPosition();
+            SetSplitMode(SplitMode.NoSplit, self);
+
             for (int i = 0; i < cameraListeners.Length; i++)
             {
-                if (cameraListeners[i] != null) cameraListeners[i].Destroy();
+                cameraListeners[i]?.Destroy();
                 cameraListeners[i] = null;
             }
             realizer2 = null;
@@ -349,7 +257,7 @@ namespace SplitScreenCoop
                 }
             }
 
-            if (realizer2 != null) realizer2.Update();
+            realizer2?.Update();
         }
 
         public void SetSplitMode(SplitMode split, RainWorldGame game)
@@ -442,241 +350,6 @@ namespace SplitScreenCoop
             self.ReturnFContainer("HUD").SetPosition(offset);
             self.ReturnFContainer("HUD2").SetPosition(offset);
             self.hud?.map?.inFrontContainer?.SetPosition(offset);
-        }
-
-
-        private void RoomCamera_DrawUpdate(On.RoomCamera.orig_DrawUpdate orig, RoomCamera self, float timeStacker, float timeSpeed)
-        {
-            var prev = curCamera;
-            try
-            {
-                curCamera = self.cameraNumber;
-                orig(self, timeStacker, timeSpeed);
-            }
-            finally
-            {
-                curCamera = prev;
-            }
-        }
-
-        private void RoomCamera_MoveCamera_Room_int(On.RoomCamera.orig_MoveCamera_Room_int orig, RoomCamera self, Room newRoom, int camPos)
-        {
-            ConsiderColapsing(self.game);
-
-            var prev = curCamera;
-            try
-            {
-                curCamera = self.cameraNumber;
-                orig(self, newRoom, camPos);
-            }
-            finally
-            {
-                curCamera = prev;
-            }
-        }
-
-        private void RoomCamera_MoveCamera_int(On.RoomCamera.orig_MoveCamera_int orig, RoomCamera self, int camPos)
-        {
-            var prev = curCamera;
-            try
-            {
-                curCamera = self.cameraNumber;
-                orig(self, camPos);
-            }
-            finally
-            {
-                curCamera = prev;
-            }
-        }
-
-        private void RoomCamera_Update(On.RoomCamera.orig_Update orig, RoomCamera self)
-        {
-            var prev = curCamera;
-            try
-            {
-                curCamera = self.cameraNumber;
-                orig(self);
-            }
-            finally
-            {
-                curCamera = prev;
-            }
-        }
-
-        public delegate void delSetGlobalColor(string propertyName, Color vec);
-        public void Shader_SetGlobalColor(delSetGlobalColor orig, string propertyName, Color vec)
-        {
-            orig(propertyName, vec);
-            if (curCamera >= 0 && cameraListeners[curCamera] is CameraListener l)
-            {
-                l.ShaderColors[propertyName] = vec;
-            }
-        }
-
-        public delegate void delSetGlobalVector(string propertyName, Vector4 vec);
-        public void Shader_SetGlobalVector(delSetGlobalVector orig, string propertyName, Vector4 vec)
-        {
-            orig(propertyName, vec);
-            if (curCamera >= 0 && cameraListeners[curCamera] is CameraListener l)
-            {
-                //if (CurrentSplitMode != SplitMode.NoSplit)
-                //{
-                //    if (propertyName == "_spriteRect")
-                //    {
-                //        int a = CurrentSplitMode == SplitMode.SplitHorizontal ? 1 : 0;
-                //        int b = CurrentSplitMode == SplitMode.SplitHorizontal ? 3 : 2;
-                //        vec[a] = vec[a] * 2f - 0.5f;
-                //        vec[b] = vec[b] * 2f - 0.5f;
-                //        //vec[a] = vec[a] - 0.25f;
-                //        //vec[b] = vec[b] - 0.25f;
-                //        //vec[a] = vec[a] + offset;
-                //        //vec[b] = vec[b] + offset;
-                //    }
-                //    //else if (propertyName == "_camInRoomRect")
-                //    //{
-                //    //    vec[CurrentSplitMode == SplitMode.SplitHorizontal ? 3 : 2] /= 2f;
-                //    //}
-                //}
-                l.ShaderVectors[propertyName] = vec;
-            }
-        }
-
-        public delegate void delSetGlobalFloat(string propertyName, float f);
-        public void Shader_SetGlobalFloat(delSetGlobalFloat orig, string propertyName, float f)
-        {
-            orig(propertyName, f);
-            if (curCamera >= 0 && cameraListeners[curCamera] is CameraListener l)
-            {
-                l.ShaderFloats[propertyName] = f;
-            }
-        }
-
-        public delegate void delSetGlobalTexture(string propertyName, Texture t);
-        public void Shader_SetGlobalTexture(delSetGlobalTexture orig, string propertyName, Texture t)
-        {
-            orig(propertyName, t);
-            if (curCamera >= 0 && cameraListeners[curCamera] is CameraListener l)
-            {
-                l.ShaderTextures[propertyName] = t;
-            }
-        }
-
-        public class CameraListener : MonoBehaviour
-        {
-            public RoomCamera roomCamera;
-            public RenderTexture renderTexture;
-            public Dictionary<string, Color> ShaderColors = new Dictionary<string, Color>();
-            public Dictionary<string, Vector4> ShaderVectors = new Dictionary<string, Vector4>();
-            public Dictionary<string, float> ShaderFloats = new Dictionary<string, float>();
-            public Dictionary<string, Texture> ShaderTextures = new Dictionary<string, Texture>();
-            private Rect sourceRect;
-            private Rect targetRect;
-            private bool mapped;
-            private bool _skip;
-            private int srcX;
-            private int srcY;
-            private int srcWidth;
-            private int srcHeight;
-            private int dstX;
-            private int dstY;
-
-            public bool skip
-            {
-                get => _skip; internal set
-                {
-                    _skip = value;
-                    if (roomCamera != null)
-                    {
-                        sLogger.LogWarning("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + "  set skip " + value);
-                        fcameras[roomCamera.cameraNumber].targetTexture = _skip ? Futile.screen.renderTexture : this.renderTexture;
-                    }
-                }
-            }
-
-            void OnPreRender()
-            {
-                foreach (var kv in ShaderColors) Shader.SetGlobalColor(kv.Key, kv.Value);
-                foreach (var kv in ShaderVectors) Shader.SetGlobalVector(kv.Key, kv.Value);
-                foreach (var kv in ShaderFloats) Shader.SetGlobalFloat(kv.Key, kv.Value);
-                foreach (var kv in ShaderTextures) Shader.SetGlobalTexture(kv.Key, kv.Value);
-            }
-
-            void OnDestroy()
-            {
-                ShaderTextures.Clear();
-                roomCamera = null;
-                if (renderTexture != null)
-                {
-                    renderTexture.Release();
-                    renderTexture.DiscardContents();
-                    renderTexture = null;
-                }
-            }
-
-            public void Destroy()
-            {
-                ShaderTextures.Clear();
-                roomCamera = null;
-                if (renderTexture != null)
-                {
-                    renderTexture.Release();
-                    renderTexture.DiscardContents();
-                    renderTexture = null;
-                }
-                Destroy(this);
-            }
-
-            internal void ReinitRenderTexture()
-            {
-                sLogger.LogWarning("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + "  ReinitRenderTexture");
-                if (renderTexture != null)
-                {
-                    renderTexture.Release();
-                    renderTexture.DiscardContents();
-                }
-                renderTexture = new RenderTexture(Futile.screen.renderTexture);
-                if (mapped)
-                {
-                    SetMap(this.sourceRect, this.targetRect);
-                }
-            }
-
-            internal void AttachTo(RoomCamera self)
-            {
-                roomCamera = self;
-                sLogger.LogWarning("CameraListener attached to roomcamera #" + self.cameraNumber);
-                ReinitRenderTexture();
-                fcameras[self.cameraNumber].targetTexture = renderTexture;
-            }
-
-            internal void SetMap(Rect sourceRect, Rect targetRect)
-            {
-                sLogger.LogWarning("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + "  SetMap");
-                if (renderTexture != null)
-                {
-                    var h = renderTexture.height;
-                    var w = renderTexture.width;
-                    srcX = Mathf.FloorToInt(w * sourceRect.x);
-                    srcY = Mathf.FloorToInt(h * sourceRect.y);
-                    srcWidth = Mathf.FloorToInt(w * sourceRect.width);
-                    srcHeight = Mathf.FloorToInt(h * sourceRect.height);
-                    dstX = Mathf.FloorToInt(w * targetRect.x);
-                    dstY = Mathf.FloorToInt(h * targetRect.y);
-                }
-                this.sourceRect = sourceRect;
-                this.targetRect = targetRect;
-
-                mapped = true;
-            }
-
-            public void OnPostRender()
-            {
-                if (renderTexture != null && !_skip && mapped)
-                {
-                    //sLogger.LogWarning("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + "  Rendering");
-                    Graphics.CopyTexture(renderTexture, 0, 0, srcX, srcY, srcWidth, srcHeight, Futile.screen.renderTexture, 0, 0, dstX, dstY);
-                }
-            }
         }
     }
 }

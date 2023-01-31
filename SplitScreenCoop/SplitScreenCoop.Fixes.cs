@@ -8,8 +8,10 @@ namespace SplitScreenCoop
 {
     public partial class SplitScreenCoop
     {
+        // Dialogue centered and oncreen
         private Vector2 DialogBox_DrawPos(On.HUD.DialogBox.orig_DrawPos orig, HUD.DialogBox self, float timeStacker)
         {
+            // maybe instead of cl.roomcamera we could go self.hud.camera ?
             if (CurrentSplitMode == SplitMode.SplitVertical && curCamera >= 0 && cameraListeners[curCamera] is CameraListener cl)
             {
                 return orig(self, timeStacker) - new Vector2(cl.roomCamera.sSize.x / 4f, 0f);
@@ -17,6 +19,7 @@ namespace SplitScreenCoop
             return orig(self, timeStacker);
         }
 
+        // reduce double audio
         private void VirtualMicrophone_DrawUpdate(On.VirtualMicrophone.orig_DrawUpdate orig, VirtualMicrophone self, float timeStacker, float timeSpeed)
         {
             if (self.camera.cameraNumber > 0 && self.camera.room == self.camera.game.cameras[0].room)
@@ -33,6 +36,7 @@ namespace SplitScreenCoop
         }
 
         bool rrNestedLock;
+        // Realizers work together
         private bool RoomRealizer_CanAbstractizeRoom(On.RoomRealizer.orig_CanAbstractizeRoom orig, RoomRealizer self, RoomRealizer.RealizedRoomTracker tracker)
         {
             var r = orig(self, tracker);
@@ -52,6 +56,7 @@ namespace SplitScreenCoop
             return r;
         }
 
+        // Realizer2 in new world
         private void OverWorld_WorldLoaded(On.OverWorld.orig_WorldLoaded orig, OverWorld self)
         {
             orig(self);
@@ -65,6 +70,7 @@ namespace SplitScreenCoop
         }
 
         bool inpause; // non reentrant
+        // Make 2 pause
         private void PauseMenu_ctor(On.Menu.PauseMenu.orig_ctor orig, Menu.PauseMenu self, ProcessManager manager, RainWorldGame game)
         {
             orig(self, manager, game);
@@ -104,6 +110,7 @@ namespace SplitScreenCoop
             }
         }
 
+        // Need to shut down two menus
         private void PauseMenu_ShutDownProcess(On.Menu.PauseMenu.orig_ShutDownProcess orig, Menu.PauseMenu self)
         {
             orig(self);
@@ -111,14 +118,15 @@ namespace SplitScreenCoop
             if (otherpause != null) self.manager.StopSideProcess(otherpause); // removes from sideprocesses list so this isnt a recursive loop
         }
 
+        // Hud is at an offset on splitscreen mode
         private void RoomCamera_FireUpSinglePlayerHUD(On.RoomCamera.orig_FireUpSinglePlayerHUD orig, RoomCamera self, Player player)
         {
             orig(self, player);
-            if (CurrentSplitMode != SplitMode.NoSplit) OffsetHud(self);
+            OffsetHud(self);
         }
 
-        // cull should account for more cams
         public delegate bool delget_ShouldBeCulled(GraphicsModule gm);
+        // cull should account for more cams
         public bool get_ShouldBeCulled(delget_ShouldBeCulled orig, GraphicsModule gm)
         {
             if (gm.owner.room.game.cameras.Length > 1)
@@ -259,6 +267,7 @@ namespace SplitScreenCoop
             else Logger.LogError(new Exception("Couldn't IL-hook PoleMimicGraphics_InitiateSprites from SplitScreenMod")); // deffendisve progrmanig
         }
 
+        // fixes fsprite names so they can use different textures
         private void RoomCamera_ctor(ILContext il)
         {
             var c = new ILCursor(il);

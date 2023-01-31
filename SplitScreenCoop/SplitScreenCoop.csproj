@@ -100,9 +100,11 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="SplitScreenCoop.CameraListener.cs" />
     <Compile Include="SplitScreenCoop.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SplitScreenCoop.Fixes.cs" />
+    <Compile Include="SplitScreenCoop.ShaderShenanigans.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Mod\modinfo.json" />
