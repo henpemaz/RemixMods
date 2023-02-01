@@ -7,11 +7,8 @@ using UnityEngine;
 using BepInEx;
 using BepInEx.Configuration;
 using MonoMod.RuntimeDetour;
-using MonoMod.RuntimeDetour.HookGen;
 using MonoMod.Cil;
 using Mono.Cecil.Cil;
-using System.IO;
-using System.Security.Cryptography;
 using BepInEx.Logging;
 
 [module: UnverifiableCode]
@@ -62,10 +59,10 @@ namespace SplitScreenCoop
         public static int curCamera = -1;
         public static CameraListener[] cameraListeners = new CameraListener[2];
         public static RoomRealizer realizer2;
-        public bool init;
 
+        public bool init;
         public static ManualLogSource sLogger;
-        public bool selfSufficientCoop;
+        public static bool selfSufficientCoop;
 
         public void Update()
         {
@@ -93,22 +90,13 @@ namespace SplitScreenCoop
                 On.RainWorldGame.Update += RainWorldGame_Update; // split unsplit
                 On.RainWorldGame.ShutDownProcess += RainWorldGame_ShutDownProcess; // unbind camlistener
 
-                // wrapped calls to store shader globals
-                On.RoomCamera.DrawUpdate += RoomCamera_DrawUpdate;
-                On.RoomCamera.Update += RoomCamera_Update;
-                On.RoomCamera.MoveCamera_int += RoomCamera_MoveCamera_int;
-                On.RoomCamera.MoveCamera_Room_int += RoomCamera_MoveCamera_Room_int; // can also colapse to single cam if one of the cams is dead 
-                
                 // fixes in fixes file
-                On.OverWorld.WorldLoaded += OverWorld_WorldLoaded; // roomrealizer 2 
                 On.RoomCamera.FireUpSinglePlayerHUD += RoomCamera_FireUpSinglePlayerHUD;// displace cam2 map
                 On.Menu.PauseMenu.ctor += PauseMenu_ctor;// displace pause menu
                 On.Menu.PauseMenu.ShutDownProcess += PauseMenu_ShutDownProcess;// kill dupe pause menu
                 On.Water.InitiateSprites += Water_InitiateSprites; // move water somewhere near final position
                 On.VirtualMicrophone.DrawUpdate += VirtualMicrophone_DrawUpdate; // mic from 2nd cam should not pic up while on same cam
                 On.HUD.DialogBox.DrawPos += DialogBox_DrawPos; // center dialog in half screen
-                IL.RoomRealizer.Update += RoomRealizer_Update;
-                On.RoomRealizer.CanAbstractizeRoom += RoomRealizer_CanAbstractizeRoom;
 
                 IL.RoomCamera.ctor += RoomCamera_ctor; // create sprite with the right name
                 IL.RoomCamera.Update += RoomCamera_Update1; // follow critter, clamp to proper values
@@ -121,6 +109,19 @@ namespace SplitScreenCoop
                 new Hook(typeof(GraphicsModule).GetMethod("get_ShouldBeCulled", BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic),
                     typeof(SplitScreenCoop).GetMethod("get_ShouldBeCulled"), this);
 
+                // co-op in co-op file
+                On.OverWorld.WorldLoaded += OverWorld_WorldLoaded; // roomrealizer 2 
+                IL.RoomRealizer.Update += RoomRealizer_Update;
+                On.RoomRealizer.CanAbstractizeRoom += RoomRealizer_CanAbstractizeRoom;
+                On.ShelterDoor.Close += ShelterDoor_Close;
+                IL.Player.Update += Player_Update;
+
+                // Shader shenanigans
+                // wrapped calls to store shader globals
+                On.RoomCamera.DrawUpdate += RoomCamera_DrawUpdate;
+                On.RoomCamera.Update += RoomCamera_Update;
+                On.RoomCamera.MoveCamera_int += RoomCamera_MoveCamera_int;
+                On.RoomCamera.MoveCamera_Room_int += RoomCamera_MoveCamera_Room_int; // can also colapse to single cam if one of the cams is dead
                 // unity hooks
                 // set shader variables into a dict so it can be set per-camera
                 new Hook(typeof(Shader).GetMethod("SetGlobalColor", new Type[] { typeof(string), typeof(Color) }),
@@ -252,12 +253,7 @@ namespace SplitScreenCoop
                 var cams = self.cameras;
                 cams[1].MoveCamera(self.world.activeRooms[0], 0);
 
-                realizer2 = new RoomRealizer(self.session.Players.First(p => p != self.roomRealizer.followCreature), self.world)
-                {
-                    realizedRooms = self.roomRealizer.realizedRooms,
-                    recentlyAbstractedRooms = self.roomRealizer.recentlyAbstractedRooms,
-                    realizeNeighborCandidates = self.roomRealizer.realizeNeighborCandidates
-                };
+                MakeRealizer2(self);
             }
 
             CurrentSplitMode = SplitMode.NoSplit;
@@ -323,6 +319,10 @@ namespace SplitScreenCoop
             }
 
             realizer2?.Update();
+            if (selfSufficientCoop)
+            {
+                CoopUpdate(self);
+            }
         }
 
         /// <summary>

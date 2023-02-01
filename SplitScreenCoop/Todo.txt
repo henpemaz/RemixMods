@@ -6,6 +6,14 @@ menu
 fix realizer2
 	done
 
+
+since most people play with latency, easyer mode is nice to have
+	shared food meter
+
+
+
+
+
 sleep (and wake up) in different shelters
 	food conditions check and fix
 
@@ -15,7 +23,11 @@ sleep (and wake up) in different shelters
 
 	player2 starving =/= player1 starving
 
+Gates should work really well
+	same logic as shelters? dead/Missing or there
+
 karma loss if all die, no change if one survives, gain if "most" survive
+	how about the basic 2 player thing?
 
 smooth camera follow a little
 
