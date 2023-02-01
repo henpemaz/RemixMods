@@ -103,16 +103,12 @@ namespace SplitScreenCoop
 
         public static bool coopSharedFood = true;
         public static bool sheltersClose;
-        public static bool readyForWin;
-        public static bool readyForStarve;
 
         public void CoopUpdate(RainWorldGame game)
         {
             UpdatePlayerFood(game);
 
             sheltersClose = false;
-            readyForWin = ReadyForWin(game);
-            readyForStarve = ReadyForStarve(game);
 
             if (SheltersCanClose(game))
             {
@@ -132,34 +128,29 @@ namespace SplitScreenCoop
 
         public bool SheltersCanClose(RainWorldGame game)
         {
-            return readyForWin || readyForStarve;
+            return ReadyForWin(game) || ReadyForStarve(game);
         }
 
         private bool ReadyForWin(RainWorldGame game)
         {
-            return game.session.Players.Any(p => !PlayerDeadOrMissing(p) && PlayerInShelter(p)) 
-                && game.session.Players.All(p => (PlayerDeadOrMissing(p) || (PlayerInShelter(p) && PlayerHasEnoughFood(p, false) && PlayerStill(p))));
+            return game.session.Players.Any(p => !PlayerDeadOrMissing(p) && PlayerReadyForWin(p)) 
+                && game.session.Players.All(p => PlayerDeadOrMissing(p) || PlayerReadyForWin(p));
         }
 
         private bool ReadyForStarve(RainWorldGame game)
         {
-            return game.session.Players.Any(p => !PlayerDeadOrMissing(p) && PlayerInShelter(p) && !PlayerHasEnoughFood(p, false) && PlayerHasEnoughFood(p, true) && PlayerForcingSleep(p)) 
-                && game.session.Players.All(p => (PlayerDeadOrMissing(p) || (PlayerInShelter(p) && ((PlayerHasEnoughFood(p, false) && PlayerStill(p)) || (PlayerHasEnoughFood(p, true) && PlayerForcingSleep(p))))));
+            return game.session.Players.Any(p => !PlayerDeadOrMissing(p) && PlayerReadyForStarve(p))
+                && game.session.Players.All(p => PlayerDeadOrMissing(p) || PlayerReadyForWin(p) || PlayerReadyForStarve(p));
+        }
+        
+        private bool PlayerReadyForWin(AbstractCreature p)
+        {
+            return PlayerInShelter(p) && p.realizedCreature is Player pl && pl.readyForWin && pl.touchedNoInputCounter > (ModManager.MMF ? 40 : 20);
         }
 
-        private bool PlayerStill(AbstractCreature p)
+        private bool PlayerReadyForStarve(AbstractCreature p)
         {
-            throw new NotImplementedException();
-        }
-
-        private bool PlayerForcingSleep(AbstractCreature p)
-        {
-            throw new NotImplementedException();
-        }
-
-        private bool PlayerCanForceSleep(AbstractCreature p)
-        {
-            throw new NotImplementedException();
+            return PlayerInShelter(p) && p.realizedCreature is Player pl && pl.forceSleepCounter > 260;
         }
 
         // Player considered dead or missing if dead or missing or in a grasp for longer than a second
@@ -221,9 +212,10 @@ namespace SplitScreenCoop
                 c.GotoNext(MoveType.Before,
                     i => i.MatchLdarg(0),
                     i => i.MatchLdarg(1),
-                    i => i.MatchStfld<Creature>("Update"));
+                    i => i.MatchCallOrCallvirt<Creature>("Update"));
                 ILLabel end = null;
-                c.GotoPrev(i => i.MatchCallOrCallvirt<AbstractRoom>("get_shelter"), i=>i.MatchBrfalse(out end));
+                c.GotoPrev(MoveType.After,
+                    i => i.MatchCallOrCallvirt<AbstractRoom>("get_shelter"), i=>i.MatchBrfalse(out end));
                 
                 c.Emit<SplitScreenCoop>(OpCodes.Ldsfld, "selfSufficientCoop");
                 c.Emit(OpCodes.Brtrue, end);
@@ -246,60 +238,30 @@ namespace SplitScreenCoop
             if (!selfSufficientCoop) return;
             if (self.room.abstractRoom.shelter && self.AI == null && self.room.game.IsStorySession && !self.dead && !self.Sleeping && self.room.shelterDoor != null && !self.room.shelterDoor.Broken)
             {
-                if (!self.stillInStartShelter && PlayerHasEnoughFood(self.abstractCreature, false))
+                if (PlayerCanSleep(self))
                 {
                     self.readyForWin = true;
                     self.forceSleepCounter = 0;
                 }
-                else if (self.room.world.rainCycle.timer > self.room.world.rainCycle.cycleLength)
+                else if (PlayerCanForceSleep(self) && self.input[0].y < 0 && !self.input[0].jmp && !self.input[0].thrw && !self.input[0].pckp && self.IsTileSolid(1, 0, -1) && (self.input[0].x == 0 || ((!self.IsTileSolid(1, -1, -1) || !self.IsTileSolid(1, 1, -1)) && self.IsTileSolid(1, self.input[0].x, 0))))
                 {
-                    self.readyForWin = true;
-                    self.forceSleepCounter = 0;
-                }
-                else if (self.input[0].y < 0 && !self.input[0].jmp && !self.input[0].thrw && !self.input[0].pckp && self.IsTileSolid(1, 0, -1) && (self.input[0].x == 0 || ((!self.IsTileSolid(1, -1, -1) || !self.IsTileSolid(1, 1, -1)) && self.IsTileSolid(1, self.input[0].x, 0))))
-                {
-                    if (!flag5 && self.abstractCreature.world.game.GetStorySession.saveState.malnourished && self.FoodInRoom(self.room, false) >= self.MaxFoodInStomach)
-                    {
-                        self.forceSleepCounter++;
-                    }
-                    else if (!self.abstractCreature.world.game.GetStorySession.saveState.malnourished && self.FoodInRoom(self.room, false) > 0 && self.FoodInRoom(self.room, false) < self.slugcatStats.foodToHibernate)
-                    {
-                        self.forceSleepCounter++;
-                    }
-                    else
-                    {
-                        self.forceSleepCounter = 0;
-                    }
+                    self.forceSleepCounter++;
                 }
                 else
                 {
                     self.forceSleepCounter = 0;
                 }
-                if (self.Stunned)
-                {
-                    self.readyForWin = false;
-                }
-                if (Custom.ManhattanDistance(self.abstractCreature.pos.Tile, self.room.shortcuts[0].StartTile) > 6 && (!ModManager.MMF || self.timeSinceInCorridorMode > 10) && ShelterDoor.CoordInsideShelterRange(self.abstractCreature.pos.Tile, self.room.shelterDoor.isAncient))
-                {
-                    if (self.readyForWin && self.touchedNoInputCounter > (ModManager.MMF ? 40 : 20))
-                    {
-                        if (ModManager.CoopAvailable)
-                        {
-                            self.ReadyForWinJolly = true;
-                        }
-                        self.room.shelterDoor.Close();
-                    }
-                    else if (self.forceSleepCounter > 260)
-                    {
-                        if (ModManager.CoopAvailable)
-                        {
-                            self.ReadyForStarveJolly = true;
-                        }
-                        self.sleepCounter = -24;
-                        self.room.shelterDoor.Close();
-                    }
-                }
             }
+        }
+
+        private bool PlayerCanSleep(Player self)
+        {
+            return (!self.stillInStartShelter && !self.Stunned && PlayerHasEnoughFood(self.abstractCreature, false)) || (self.room.world.rainCycle.timer > self.room.world.rainCycle.cycleLength);
+        }
+
+        private bool PlayerCanForceSleep(Player self)
+        {
+            return (!self.abstractCreature.world.game.GetStorySession.saveState.malnourished && PlayerHasEnoughFood(self.abstractCreature, true));
         }
     }
 }

@@ -1,33 +1,30 @@
 ﻿
-menu
-	player2 class dropdown
-	preferred split mode dropdown
+Self-sufficient coop mode
+	menu
+		player2 class dropdown
+		preferred split mode dropdown
 
-fix realizer2
-	done
+	fix realizer2
+		done
 
+	since most people play with latency, easier mode is nice to have
+		shared food meter
 
-since most people play with latency, easyer mode is nice to have
-	shared food meter
+		karma up (win) if ANY survived rather than ALL
 
+	sleep (and wake up) in different shelters
+		food conditions check and fix
+			done
+			todo check if "player gone" breaks anything
 
+		store shelter of player2
 
+		place player2 in stored shelter
 
+		player2 starving =/= player1 starving
 
-sleep (and wake up) in different shelters
-	food conditions check and fix
-
-	store shelter of player2
-
-	place player2 in stored shelter
-
-	player2 starving =/= player1 starving
-
-Gates should work really well
-	same logic as shelters? dead/Missing or there
-
-karma loss if all die, no change if one survives, gain if "most" survive
-	how about the basic 2 player thing?
+	Gates should work really well
+		same logic as shelters? dead/Missing or there
 
 smooth camera follow a little
 
