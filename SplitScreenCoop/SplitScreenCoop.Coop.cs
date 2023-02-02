@@ -3,6 +3,7 @@ using System.Linq;
 using UnityEngine;
 using MonoMod.Cil;
 using Mono.Cecil.Cil;
+using HUD;
 
 namespace SplitScreenCoop
 {
@@ -13,10 +14,12 @@ namespace SplitScreenCoop
         /// </summary>
         private void MakeRealizer2(RainWorldGame self)
         {
+            Logger.LogInfo("MakeRealizer2");
             if (self.session.Players.Count < 2 || self.roomRealizer == null) return;
             var player = self.session.Players.FirstOrDefault(p => p != self.roomRealizer.followCreature);
             if (player == null) return;
-            realizer2 = new RoomRealizer(self.session.Players.First(p => p != self.roomRealizer.followCreature), self.world)
+            Logger.LogInfo("MakeRealizer2 making RoomRealizer");
+            realizer2 = new RoomRealizer(player, self.world)
             {
                 realizedRooms = self.roomRealizer.realizedRooms,
                 recentlyAbstractedRooms = self.roomRealizer.recentlyAbstractedRooms,
@@ -29,18 +32,19 @@ namespace SplitScreenCoop
         /// </summary>
         public void OverWorld_WorldLoaded(On.OverWorld.orig_WorldLoaded orig, OverWorld self)
         {
+            ConsiderColapsing(self.game);
             orig(self);
             MakeRealizer2(self.game);
         }
 
         /// <summary>
-        /// Room realizers that aren't the main one skip re-assigning themselves to cameras[0].followcreature
+        /// Room realizers that aren't the main one dontret re-assigning themselves to cameras[0].followcreature
         /// </summary>
         public void RoomRealizer_Update(ILContext il)
         {
             try
             {
-                // skip this.followCreature = cam[0].followCreature if this != game.roomRealizer
+                // dontret this.followCreature = cam[0].followCreature if this != game.roomRealizer
                 var c = new ILCursor(il);
                 c.GotoNext(MoveType.Before,
                     i => i.MatchStfld<RoomRealizer>("followCreature"),
@@ -94,22 +98,27 @@ namespace SplitScreenCoop
             return r;
         }
         
+        /// <summary>
+        /// Prevent shelter door close from dontret
+        /// </summary>
         public void ShelterDoor_Close(On.ShelterDoor.orig_Close orig, ShelterDoor self)
         {
             if (selfSufficientCoop && !sheltersClose) return;
             orig(self);
         }
 
-
         public static bool coopSharedFood = true;
         public static bool sheltersClose;
+        public static bool coopActualGameover;
 
         public void CoopUpdate(RainWorldGame game)
         {
             UpdatePlayerFood(game);
 
-            sheltersClose = false;
+            coopActualGameover = false;
+            UpdateCoopGameover(game);
 
+            sheltersClose = false;
             if (SheltersCanClose(game))
             {
                 sheltersClose = true;
@@ -118,11 +127,47 @@ namespace SplitScreenCoop
             }
         }
 
+        private void UpdateCoopGameover(RainWorldGame game)
+        {
+            var isGameOver = game.GameOverModeActive;
+
+            if (game.session.Players.All(IsCreatureDead))
+            {
+                if(!isGameOver)
+                    CoopGameOver(game); // Death
+                return;
+            }
+            else if (game.session.Players.All(p => IsCreatureDead(p) || (p.realizedCreature is Player pl && pl.dangerGrasp != null)))
+            {
+                if (!isGameOver)
+                    CoopGameOver(game); // Death?
+                return;
+            }
+            else
+            {
+                if (isGameOver)
+                {
+                    // undie!
+                    foreach (var c in game.cameras)
+                    {
+                        if (c?.hud?.textPrompt is TextPrompt texty) texty.gameOverMode = false;
+                    }
+                }
+            }
+        }
+
+        void CoopGameOver(RainWorldGame game)
+        {
+            coopActualGameover = true;
+            game.GameOver(null);
+            coopActualGameover = false;
+        }
+
         private void CloseShelters(RainWorldGame game)
         {
             foreach (var p in game.session.Players)
             {
-                p.realizedCreature?.room?.shelterDoor.Close();
+                p.realizedCreature?.room?.shelterDoor?.Close();
             }
         }
 
@@ -202,7 +247,7 @@ namespace SplitScreenCoop
         }
 
         /// <summary>
-        /// Skip vanilla checks in own coop mode
+        /// Skip dontret checks in own coop mode
         /// </summary>
         private void Player_Update(ILContext il)
         {
@@ -233,6 +278,7 @@ namespace SplitScreenCoop
             }
         }
 
+        // Jesus fucking christ why can't the game code be like this
         private void ShelterUpdate(Player self)
         {
             if (!selfSufficientCoop) return;
@@ -263,5 +309,211 @@ namespace SplitScreenCoop
         {
             return (!self.abstractCreature.world.game.GetStorySession.saveState.malnourished && PlayerHasEnoughFood(self.abstractCreature, true));
         }
+
+        /// <summary>
+        /// Skip starve detection if in our own coop logic, who the F though this would be a good idea (Joar)
+        /// </summary>
+        private void ShelterDoor_Update(ILContext il)
+        {
+            try
+            {
+                var c = new ILCursor(il);
+                c.GotoNext(MoveType.Before,
+                    i => i.MatchLdarg(0),
+                    i => i.MatchLdfld<UpdatableAndDeletable>("room"),
+                    i => i.MatchLdfld<Room>("game"),
+                    i => i.MatchCallOrCallvirt<RainWorldGame>("GoToStarveScreen"));
+                ILLabel skip = null;
+                c.GotoPrev(MoveType.After,
+                    i => i.MatchLdarg(0),
+                    i => i.MatchLdfld<ShelterDoor>("closeSpeed"),
+                    i => i.MatchLdcR4(0f),
+                    i => i.MatchBleUn(out skip)
+                    );
+                c.Emit<SplitScreenCoop>(OpCodes.Ldsfld, "selfSufficientCoop");
+                c.Emit(OpCodes.Brtrue, skip);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e);
+                throw;
+            }
+        }
+
+        private void ShelterDoor_DoorClosed(On.ShelterDoor.orig_DoorClosed orig, ShelterDoor self)
+        {
+            if (selfSufficientCoop)
+            {
+                if(self.room.game.manager.upcomingProcess == null)
+                {
+                    CoopWinOrLoose(self.room.game);
+                }
+            }
+            else { orig(self); }
+        }
+
+        private void CoopWinOrLoose(RainWorldGame game)
+        {
+            FixMissingPlayers(game);
+            if(game.session.Players.Any(p => !PlayerDeadOrMissing(p)))
+            {
+                var alive = game.session.Players.Where(p => !PlayerDeadOrMissing(p));
+                if (alive.All(p => !PlayerHasEnoughFood(p, true))) {
+                    Logger.LogInfo("CoopWinOrLoose -> GoToStarveScreen");
+                    game.GoToStarveScreen();
+                    return;
+                }
+                bool starving = coopSharedFood ? !PlayerHasEnoughFood(alive.First(), false)
+                    : alive.All(p=> !PlayerHasEnoughFood(p, false));
+                Logger.LogInfo($"CoopWinOrLoose -> Win(malnourished:{starving})");
+                game.Win(starving);
+                return;
+            }
+            else
+            {
+                Logger.LogInfo("CoopWinOrLoose -> GoToDeathScreen");
+                game.GoToDeathScreen();
+            }
+        }
+
+        private void FixMissingPlayers(RainWorldGame game)
+        {
+            var validPlayer = game.Players.First(p => game.world.GetAbstractRoom(p.pos) != null);
+            game.Players.ForEach(p => { if (game.world.GetAbstractRoom(p.pos) == null) { p.pos = validPlayer.pos; p.world = validPlayer.world; } });
+        }
+
+        public delegate AbstractCreature orig_get_FirstAlivePlayer(RainWorldGame self);
+        public AbstractCreature get_FirstAlivePlayer(orig_get_FirstAlivePlayer orig, RainWorldGame self)
+        {
+            if (selfSufficientCoop) return self.session.Players.FirstOrDefault(p => !PlayerDeadOrMissing(p)) ?? orig(self); // null bad lmao
+            return orig(self);
+        }
+
+        private void SaveState_SessionEnded(ILContext il)
+        {
+            try
+            {
+                var c = new ILCursor(il);
+                c.GotoNext(MoveType.Before, // go to food clamped
+                    i => i.MatchLdfld<SlugcatStats>("maxFood"),
+                    i => i.MatchCallOrCallvirt(out _), // custom.intclamp
+                    i => i.MatchStfld<SaveState>("food")
+                    );
+                c.GotoPrev(MoveType.Before, // go to start of clamp block
+                    i => i.MatchLdarg(0),
+                    i => i.MatchLdarg(0),
+                    i => i.MatchLdfld<SaveState>("food")
+                    );
+                var skip = c.IncomingLabels.First(); // a jump that skipped dontret
+                var vanilla = il.DefineLabel();
+                c.GotoPrev(MoveType.After, i => i.MatchBr(out var lab) && lab.Target == skip.Target); // right before dontret block
+                c.MoveAfterLabels();
+                c.Emit<SplitScreenCoop>(OpCodes.Ldsfld, "selfSufficientCoop");
+                c.Emit(OpCodes.Brfalse, vanilla);
+                c.Emit(OpCodes.Ldarg_0);
+                c.Emit(OpCodes.Ldarg_1);
+                c.EmitDelegate(CoopSessionFood);
+                c.Emit(OpCodes.Br, skip);
+                c.MarkLabel(vanilla);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e);
+                throw;
+            }
+        }
+
+        void CoopSessionFood(SaveState ss, RainWorldGame game)
+        {
+            Logger.LogInfo($"CoopSessionFood was {ss.food}");
+            ss.food += (game.Players.Where(p => !PlayerDeadOrMissing(p)).OrderByDescending(p => (p.realizedCreature as Player).FoodInRoom(false)).First().realizedCreature as Player).FoodInRoom(true);
+            Logger.LogInfo($"CoopSessionFood became {ss.food}");
+        }
+
+        private void RainWorldGame_ctor2(ILContext il)
+        {
+            try
+            {
+                var c = new ILCursor(il);
+                int loc = 0;
+                c.GotoNext(MoveType.Before, // go to food
+                    i => i.MatchLdfld<SaveState>("food"),
+                    i => i.MatchStloc(out loc)
+                    );
+
+                c.GotoNext(MoveType.Before, // go to start of 'vanilla while'
+                    i => i.MatchBr(out _)
+                    );
+                var vanilla = il.DefineLabel();
+                c.MoveAfterLabels();
+                c.Emit<SplitScreenCoop>(OpCodes.Ldsfld, "selfSufficientCoop");
+                c.Emit(OpCodes.Brfalse, vanilla);
+                c.Emit(OpCodes.Ldarg_0);
+                c.Emit(OpCodes.Ldloc, loc);
+                c.EmitDelegate(CoopStartingFood);
+                c.Emit(OpCodes.Stloc, loc);
+                c.MarkLabel(vanilla);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e);
+                throw;
+            }
+        }
+
+        int CoopStartingFood(RainWorldGame game, int foodInSave)
+        {
+            Logger.LogInfo("CoopStartingFood");
+            if (selfSufficientCoop && coopSharedFood)
+            {
+                if(foodInSave > 0)
+                {
+                    Logger.LogInfo($"CoopStartingFood shared {foodInSave} food");
+                    game.session.Players.ForEach(p => { (p.state as PlayerState).foodInStomach = foodInSave; });
+                    Logger.LogInfo($"CoopStartingFood p0 has {(game.session.Players[0].state as PlayerState).foodInStomach} food");
+                    foodInSave = 0;
+                }
+            }
+            return foodInSave;
+        }
+
+        // this game is stupid with how it calls gameover before player.base.die (unless you have the DLC installed!)
+        // can't detect which players are dead so instead we ignore all calls and update gameover state on game update tick
+        private void RainWorldGame_GameOver(ILContext il)
+        {
+            try
+            {
+                var c = new ILCursor(il);
+                c.GotoNext(MoveType.After, // StorySession If
+                    i => i.MatchCallOrCallvirt<RainWorldGame>("get_IsStorySession"),
+                    i => i.MatchBrfalse(out _)
+                    );
+
+                var dontret = il.DefineLabel();
+                c.MoveAfterLabels();
+                c.Emit<SplitScreenCoop>(OpCodes.Ldsfld, "selfSufficientCoop");
+                c.Emit(OpCodes.Brfalse, dontret);
+                c.Emit<SplitScreenCoop>(OpCodes.Ldsfld, "coopActualGameover");
+                c.Emit(OpCodes.Brtrue, dontret);
+                c.Emit(OpCodes.Ret);
+                c.MarkLabel(dontret);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e);
+                throw;
+            }
+        }
+
+        private int RegionGate_PlayersInZone(On.RegionGate.orig_PlayersInZone orig, RegionGate self)
+        {
+            if (selfSufficientCoop)
+            {
+                // vanilla logic was just wrong alltogether?
+                if (self.room.game.Players.Any(p => (!PlayerDeadOrMissing(p) && p.Room != self.room.abstractRoom))) return -1;
+            }
+            return orig(self);
+        }
+
     }
 }

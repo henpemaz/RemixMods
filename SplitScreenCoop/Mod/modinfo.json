@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "target_game_version": "v1.9",
   "authors": "Henpemaz",
-  "description": "Two player co-op with splitscreen. Supports players splitting up far away and sleeping in different shelters.",
+  "youtube_trailer_id": "6yur4B-UZxw",
+  "description": "Two player co-op with splitscreen, or up to four players sharing two cameras if using Jolly Co-op.<LINE><LINE>Supports players splitting up far away and sleeping in different shelters (not supported if using Jolly). Currently, both players will still wake up in the same shelter.<LINE><LINE>Planned features:<LINE>- Saving in different shelters<LINE>- Collor picker for player 2<LINE>- 3 and 4 way split<LINE><LINE>Special thanks to:<LINE>- Intikus, helped with the trailer<LINE>- NoirCatto",
   "requirements": [],
   "requirements_names": [],
   "checksum_override_version": false

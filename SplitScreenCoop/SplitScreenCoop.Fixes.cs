@@ -390,6 +390,26 @@ namespace SplitScreenCoop
                 }
             }
             else Logger.LogError(new Exception("Couldn't IL-hook RoomCamera_Update1 from SplitScreenMod")); // deffendisve progrmanig
+
+
+            // Jolly do NOT touch the camera I hecking swear you don't know what you're doing
+            try
+            {
+                //var c = new ILCursor(il);
+                c.Index = 0;
+                ILLabel doNOT = null;
+                c.GotoNext(MoveType.After, // this.game.AlivePlayers.Count > 0 && this.game.FirstAlivePlayer != null
+                    i => i.MatchCallOrCallvirt<RainWorldGame>("get_FirstAlivePlayer"),
+                    i => i.MatchBrfalse(out doNOT)
+                    );
+
+                c.Emit(OpCodes.Br, doNOT); // just don't
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e);
+                throw;
+            }
         }
 
         /// <summary>

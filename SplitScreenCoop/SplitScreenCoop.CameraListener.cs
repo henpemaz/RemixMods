@@ -39,7 +39,7 @@ namespace SplitScreenCoop
                     _skip = value;
                     if (roomCamera != null)
                     {
-                        sLogger.LogInfo("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + " set skip " + value);
+                        //sLogger.LogInfo("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + " set skip " + value);
                         fcameras[roomCamera.cameraNumber].targetTexture = _skip ? Futile.screen.renderTexture : this.renderTexture;
                     }
                 }
@@ -72,7 +72,7 @@ namespace SplitScreenCoop
 
             public void ReinitRenderTexture()
             {
-                sLogger.LogInfo("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + " ReinitRenderTexture");
+                //sLogger.LogInfo("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + " ReinitRenderTexture");
                 if (renderTexture != null)
                 {
                     renderTexture.Release();
@@ -101,7 +101,7 @@ namespace SplitScreenCoop
             /// </summary>
             public void SetMap(Rect sourceRect, Rect targetRect)
             {
-                sLogger.LogInfo("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + " SetMap");
+                //sLogger.LogInfo("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + " SetMap");
                 if (renderTexture != null)
                 {
                     var h = renderTexture.height;

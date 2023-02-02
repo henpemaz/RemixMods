@@ -10,6 +10,7 @@ using MonoMod.RuntimeDetour;
 using MonoMod.Cil;
 using Mono.Cecil.Cil;
 using BepInEx.Logging;
+using System.Runtime.InteropServices;
 
 [module: UnverifiableCode]
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -22,6 +23,7 @@ namespace SplitScreenCoop
     {
         public void OnEnable()
         {
+            Logger.LogInfo("OnEnable");
             sLogger = Logger;
             On.RainWorld.OnModsInit += OnModsInit;
 
@@ -82,7 +84,10 @@ namespace SplitScreenCoop
             {
                 if (init) return;
                 init = true;
+                Logger.LogInfo("OnModsInit");
 
+
+                // splitscreen functionality
                 IL.RainWorldGame.ctor += RainWorldGame_ctor1;
                 On.RainWorldGame.ctor += RainWorldGame_ctor; // make roomcam2, follow fix
 
@@ -111,10 +116,18 @@ namespace SplitScreenCoop
 
                 // co-op in co-op file
                 On.OverWorld.WorldLoaded += OverWorld_WorldLoaded; // roomrealizer 2 
-                IL.RoomRealizer.Update += RoomRealizer_Update;
-                On.RoomRealizer.CanAbstractizeRoom += RoomRealizer_CanAbstractizeRoom;
-                On.ShelterDoor.Close += ShelterDoor_Close;
-                IL.Player.Update += Player_Update;
+                IL.RoomRealizer.Update += RoomRealizer_Update; // they broke roomrealizer
+                On.RoomRealizer.CanAbstractizeRoom += RoomRealizer_CanAbstractizeRoom; // two checks
+                On.ShelterDoor.Close += ShelterDoor_Close; // custom close logic
+                IL.Player.Update += Player_Update; // custom sleep update
+                On.ShelterDoor.DoorClosed += ShelterDoor_DoorClosed; // custom win condition
+                IL.ShelterDoor.Update += ShelterDoor_Update; // custom win/starve detection
+                new Hook(typeof(RainWorldGame).GetMethod("get_FirstAlivePlayer", BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic),
+                    typeof(SplitScreenCoop).GetMethod("get_FirstAlivePlayer"), this);
+                IL.SaveState.SessionEnded += SaveState_SessionEnded;
+                IL.RainWorldGame.ctor += RainWorldGame_ctor2;
+                IL.RainWorldGame.GameOver += RainWorldGame_GameOver;
+                On.RegionGate.PlayersInZone += RegionGate_PlayersInZone;
 
                 // Shader shenanigans
                 // wrapped calls to store shader globals
@@ -132,6 +145,13 @@ namespace SplitScreenCoop
                     typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalFloat"), this);
                 new Hook(typeof(Shader).GetMethod("SetGlobalTexture", new Type[] { typeof(string), typeof(Texture) }),
                     typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalTexture"), this);
+
+
+                // bastard
+                On.RoomRealizer.KillRoom += RoomRealizer_KillRoom;
+
+                Logger.LogInfo("OnModsInit done");
+
             }
             catch (Exception e)
             {
@@ -145,12 +165,21 @@ namespace SplitScreenCoop
             }
         }
 
+        private void RoomRealizer_KillRoom(On.RoomRealizer.orig_KillRoom orig, RoomRealizer self, AbstractRoom room)
+        {
+            orig(self, room);
+            //Logger.LogError($"RoomRealizer_KillRoom -> is prime:{self == self.world.game.roomRealizer}");
+            //Logger.LogError(System.Environment.StackTrace);
+        }
+
         /// <summary>
         /// Init unity camera 2
         /// </summary>
         public void Futile_Init(On.Futile.orig_Init orig, Futile self, FutileParams futileParams)
         {
             orig(self, futileParams);
+
+            Logger.LogInfo("Futile_Init creating camera2");
             self._cameraHolder2 = new GameObject();
             self._cameraHolder2.transform.parent = self.gameObject.transform;
             self._camera2 = self._cameraHolder2.AddComponent<Camera>();
@@ -160,6 +189,7 @@ namespace SplitScreenCoop
 
             self.camera2.enabled = false;
             self.UpdateCameraPosition();
+            Logger.LogInfo("Futile_Init camera2 success");
         }
 
         /// <summary>
@@ -182,6 +212,7 @@ namespace SplitScreenCoop
         {
             orig(self);
 
+            Logger.LogInfo("Futile_UpdateCameraPosition");
             for (int i = 0; i < fcameras.Length; i++)
             {
                 if (fcameras[i] == null) continue;
@@ -210,8 +241,10 @@ namespace SplitScreenCoop
                 c.Emit(OpCodes.Ldarg_0);
                 c.EmitDelegate<Action<RainWorldGame>>((self) =>
                 {
+                    Logger.LogInfo("RainWorldGame_ctor1 hookpoint");
                     if (self.session.Players.Count > 1 && preferedSplitMode != SplitMode.NoSplit)
                     {
+                        Logger.LogInfo("RainWorldGame_ctor1 creating roomcamera2");
                         var cams = self.cameras;
                         Array.Resize(ref cams, 2);
                         self.cameras = cams;
@@ -220,6 +253,7 @@ namespace SplitScreenCoop
                         cams[0].followAbstractCreature = self.session.Players[0];
                         cams[1].followAbstractCreature = self.session.Players[1];
                     }
+                    Logger.LogInfo("RainWorldGame_ctor1 hookpoint done");
                 });
             }
             else Logger.LogError(new Exception("Couldn't IL-hook RainWorldGame_ctor1 from SplitScreenMod")); // deffendisve progrmanig
@@ -230,8 +264,10 @@ namespace SplitScreenCoop
         /// </summary>
         public void RainWorldGame_ctor(On.RainWorldGame.orig_ctor orig, RainWorldGame self, ProcessManager manager)
         {
+            Logger.LogInfo("RainWorldGame_ctor");
             if (selfSufficientCoop)
             {
+                Logger.LogInfo("enabling player 2");
                 manager.rainWorld.setup.player2 = true;
             }
             // manager.rainWorld.setup.startMap = "SU_S01";
@@ -248,16 +284,20 @@ namespace SplitScreenCoop
 
             orig(self, manager);
 
-            if (self.session.Players.Count > 1 && preferedSplitMode != SplitMode.NoSplit)
-            {
-                var cams = self.cameras;
-                cams[1].MoveCamera(self.world.activeRooms[0], 0);
-
-                MakeRealizer2(self);
-            }
-
             CurrentSplitMode = SplitMode.NoSplit;
-            SetSplitMode(alwaysSplit ? preferedSplitMode : SplitMode.NoSplit, self);
+            if (self.session.Players.Count > 1 && self.cameras.Length > 1 && preferedSplitMode != SplitMode.NoSplit)
+            {
+                Logger.LogInfo("camera2 detected");
+                self.cameras[1].MoveCamera(self.world.activeRooms[0], 0);
+                MakeRealizer2(self);
+                SetSplitMode(alwaysSplit ? preferedSplitMode : SplitMode.NoSplit, self);
+            }
+            else
+            {
+                Logger.LogInfo("no camera2");
+                SetSplitMode(SplitMode.NoSplit, self);
+            }
+            Logger.LogInfo("RainWorldGame_ctor done");
         }
 
         /// <summary>
@@ -265,6 +305,7 @@ namespace SplitScreenCoop
         /// </summary>
         public void RoomCamera_ctor1(On.RoomCamera.orig_ctor orig, RoomCamera self, RainWorldGame game, int cameraNumber)
         {
+            Logger.LogInfo("RoomCamera_ctor1 for camera #" + cameraNumber);
             orig(self, game, cameraNumber);
             cameraListeners[cameraNumber]?.Destroy();
             var listener = fcameras[cameraNumber].gameObject.AddComponent<CameraListener>();
@@ -281,6 +322,7 @@ namespace SplitScreenCoop
         /// </summary>
         public void RainWorldGame_ShutDownProcess(On.RainWorldGame.orig_ShutDownProcess orig, RainWorldGame self)
         {
+            Logger.LogInfo("RainWorldGame_ShutDownProcess cleanups");
             SetSplitMode(SplitMode.NoSplit, self);
 
             for (int i = 0; i < cameraListeners.Length; i++)
@@ -298,6 +340,9 @@ namespace SplitScreenCoop
         public void RainWorldGame_Update(On.RainWorldGame.orig_Update orig, RainWorldGame self)
         {
             orig(self);
+
+            if (self.GamePaused) return;
+
             if (self.cameras.Length > 1)
             {
                 var main = self.cameras[0];
@@ -330,8 +375,10 @@ namespace SplitScreenCoop
         /// </summary>
         public void SetSplitMode(SplitMode split, RainWorldGame game)
         {
+            Logger.LogInfo("SetSplitMode");
             if (game.cameras.Length > 1)
             {
+                Logger.LogInfo("multicam");
                 var main = game.cameras[0];
                 var other = game.cameras[1];
                 CurrentSplitMode = split;
@@ -340,6 +387,7 @@ namespace SplitScreenCoop
 
                 if (CurrentSplitMode == SplitMode.NoSplit)
                 {
+                    Logger.LogInfo("NoSplit");
                     for (int i = 1; i < fcameras.Length; i++)
                     {
                         fcameras[i].enabled = false;
@@ -349,6 +397,7 @@ namespace SplitScreenCoop
                 }
                 else if (CurrentSplitMode == SplitMode.SplitHorizontal)
                 {
+                    Logger.LogInfo("SplitHorizontal");
                     cameraListeners[0].SetMap(new Rect(0f, 0.25f, 1f, 0.5f), new Rect(0f, 0.5f, 1f, 0.5f));
                     cameraListeners[0].skip = false;
                     fcameras[1].enabled = true;
@@ -356,11 +405,22 @@ namespace SplitScreenCoop
                 }
                 else if (CurrentSplitMode == SplitMode.SplitVertical)
                 {
+                    Logger.LogInfo("SplitVertical");
                     cameraListeners[0].SetMap(new Rect(0.25f, 0f, 0.5f, 1f), new Rect(0f, 0f, 0.5f, 1f));
                     cameraListeners[0].skip = false;
                     fcameras[1].enabled = true;
                     cameraListeners[1].SetMap(new Rect(0.25f, 0f, 0.5f, 1f), new Rect(0.5f, 0f, 0.5f, 1f));
                 }
+            }
+            else
+            {
+                Logger.LogInfo("single cam NoSplit");
+                for (int i = 1; i < fcameras.Length; i++)
+                {
+                    fcameras[i].enabled = false;
+                }
+                cameraListeners[0].skip = true;
+                cameraListeners[0].SetMap(new Rect(0f, 0f, 1f, 1f), new Rect(0f, 0f, 1f, 1f));
             }
         }
 
