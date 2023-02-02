@@ -1,49 +1,41 @@
 ﻿
 Self-sufficient coop mode
-	menu
-		player2 class dropdown
-		preferred split mode dropdown
-			actually do revise these requirements
+	done
+		since most people play with latency, easier mode is nice to have
+			shared food meter
+			karma up (win) if ANY survived rather than ALL
 
-	fix realizer2
-		done
-		game unloaded player 2 as it was being CARRIED into another room
-
-	since most people play with latency, easier mode is nice to have
-		shared food meter
-			done?
-
-		karma up (win) if ANY survived rather than ALL
-			done
-
-	sleep (and wake up) in different shelters
 		food conditions check and fix
-			done
-			todo check if "player gone" breaks anything
+
+		food at end of session
+		food at start of session
+			done and done!
+
+		prevent gameover prompts
+
+		Gates should work really well
+			same logic as shelters? dead/Missing or there
+
+		fix hunter start
+		fix friend to offscreenden
+
+	todo
+		menu
+			player2 class dropdown
+			preferred split mode dropdown
+				actually do revise these requirements
+
+		fix realizer2
+			game unloaded player 2 as it was being CARRIED into another room
+			unreproduceable?
 	
-	food at end of session
-	food at start of session
-		done and done!
+		sleep (and wake up) in different shelters
+			store shelter of player2
+			place player2 in stored shelter
+	
+		karma flower spawn super buggy on player 2 dying
 
-	prevent gameover prompts
-		done
-
-	store shelter of player2
-
-	place player2 in stored shelter
-
-	Gates should work really well
-		same logic as shelters? dead/Missing or there
-
-	karma flower spawn super buggy on player 2 dying
-
-	Support remix custom colors
-
-Jolly compat
-	test
-	fix camswitching logic
-
-	seems ok enough, ship it
+		Support remix custom colors
 
 splitscreen
 	smooth camera follow a little

@@ -11,6 +11,7 @@ using MonoMod.Cil;
 using Mono.Cecil.Cil;
 using BepInEx.Logging;
 using System.Runtime.InteropServices;
+using MonoMod.RuntimeDetour.HookGen;
 
 [module: UnverifiableCode]
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -18,7 +19,7 @@ using System.Runtime.InteropServices;
 
 namespace SplitScreenCoop
 {
-    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.0")]
+    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.1")]
     public partial class SplitScreenCoop : BaseUnityPlugin
     {
         public void OnEnable()
@@ -28,7 +29,7 @@ namespace SplitScreenCoop
             On.RainWorld.OnModsInit += OnModsInit;
 
             // need this early
-            On.Futile.Init += Futile_Init; // turn on splitscreen
+            On.Futile.Init += Futile_Init; // turn on cam2
             On.Futile.UpdateCameraPosition += Futile_UpdateCameraPosition; // handle custom switcheroos
             On.FScreen.ReinitRenderTexture += FScreen_ReinitRenderTexture; // new tech huh
 
@@ -124,10 +125,13 @@ namespace SplitScreenCoop
                 IL.ShelterDoor.Update += ShelterDoor_Update; // custom win/starve detection
                 new Hook(typeof(RainWorldGame).GetMethod("get_FirstAlivePlayer", BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic),
                     typeof(SplitScreenCoop).GetMethod("get_FirstAlivePlayer"), this);
-                IL.SaveState.SessionEnded += SaveState_SessionEnded;
-                IL.RainWorldGame.ctor += RainWorldGame_ctor2;
-                IL.RainWorldGame.GameOver += RainWorldGame_GameOver;
-                On.RegionGate.PlayersInZone += RegionGate_PlayersInZone;
+                IL.SaveState.SessionEnded += SaveState_SessionEnded; // food math
+                IL.RainWorldGame.ctor += RainWorldGame_ctor2; // food math
+                IL.RainWorldGame.GameOver += RainWorldGame_GameOver; // custom gameover detection
+                On.RegionGate.PlayersInZone += RegionGate_PlayersInZone; // joar please TEST your own code
+                On.Creature.FlyAwayFromRoom += Creature_FlyAwayFromRoom; // Player taken by vulture? die quicker please
+                HookEndpointManager.Modify(typeof(RegionGate).GetProperty("MeetRequirement").GetGetMethod(), // don't assume player[0].realizedcreature
+                    new ILContext.Manipulator(RegionGate_get_MeetRequirement));
 
                 // Shader shenanigans
                 // wrapped calls to store shader globals
@@ -146,10 +150,6 @@ namespace SplitScreenCoop
                 new Hook(typeof(Shader).GetMethod("SetGlobalTexture", new Type[] { typeof(string), typeof(Texture) }),
                     typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalTexture"), this);
 
-
-                // bastard
-                On.RoomRealizer.KillRoom += RoomRealizer_KillRoom;
-
                 Logger.LogInfo("OnModsInit done");
 
             }
@@ -163,13 +163,6 @@ namespace SplitScreenCoop
                 orig(self);
                 selfSufficientCoop = !ModManager.JollyCoop;
             }
-        }
-
-        private void RoomRealizer_KillRoom(On.RoomRealizer.orig_KillRoom orig, RoomRealizer self, AbstractRoom room)
-        {
-            orig(self, room);
-            //Logger.LogError($"RoomRealizer_KillRoom -> is prime:{self == self.world.game.roomRealizer}");
-            //Logger.LogError(System.Environment.StackTrace);
         }
 
         /// <summary>
@@ -289,7 +282,7 @@ namespace SplitScreenCoop
             {
                 Logger.LogInfo("camera2 detected");
                 self.cameras[1].MoveCamera(self.world.activeRooms[0], 0);
-                MakeRealizer2(self);
+                // MakeRealizer2(self);
                 SetSplitMode(alwaysSplit ? preferedSplitMode : SplitMode.NoSplit, self);
             }
             else
@@ -459,6 +452,7 @@ namespace SplitScreenCoop
         /// </summary>
         public void AssignCameraToPlayer(RoomCamera camera, Player player)
         {
+            Logger.LogInfo("AssignCameraToPlayer " + player.playerState.playerNumber);
             camera.followAbstractCreature = player.abstractCreature;
             var newroom = player.room ?? player.abstractCreature.Room.realizedRoom;
             if (newroom != null && camera.room != null && camera.room != newroom)
