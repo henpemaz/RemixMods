@@ -32,9 +32,9 @@ namespace SplitScreenCoop
                     i => i.MatchLdarg(0),
                     i => i.MatchLdfld<SaveState>("food")
                     );
-                var skip = c.IncomingLabels.First(); // a jump that skipped dontret
+                var skip = c.IncomingLabels.First(); // a jump that skipped vanilla
                 var vanilla = il.DefineLabel();
-                c.GotoPrev(MoveType.After, i => i.MatchBr(out var lab) && lab.Target == skip.Target); // right before dontret block
+                c.GotoPrev(MoveType.After, i => i.MatchBr(out var lab) && lab.Target == skip.Target); // right before vanilla block
                 c.MoveAfterLabels();
                 c.Emit<SplitScreenCoop>(OpCodes.Ldsfld, "selfSufficientCoop");
                 c.Emit(OpCodes.Brfalse, vanilla);

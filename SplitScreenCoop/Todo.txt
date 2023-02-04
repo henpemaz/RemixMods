@@ -20,6 +20,13 @@ Self-sufficient coop mode
 		fix friend to offscreenden
 
 	todo
+		fix players input without jolly
+			player 1 controls 1 and 2?
+			study inptu system
+		
+		2-screen mode
+			for double screens or ultra-wide
+
 		menu
 			player2 class dropdown
 			preferred split mode dropdown
@@ -27,7 +34,7 @@ Self-sufficient coop mode
 
 		fix realizer2
 			game unloaded player 2 as it was being CARRIED into another room
-			unreproduceable?
+				unreproduceable?
 	
 		sleep (and wake up) in different shelters
 			store shelter of player2

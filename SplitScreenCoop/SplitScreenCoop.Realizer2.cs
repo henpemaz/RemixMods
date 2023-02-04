@@ -39,7 +39,7 @@ namespace SplitScreenCoop
         }
 
         /// <summary>
-        /// Room realizers that aren't the main one dontret re-assigning themselves to cameras[0].followcreature
+        /// Room realizers that aren't the main one re-assigning themselves to cameras[0].followcreature
         /// dont reasign if cam.followcreature is null, you dumb fuck
         /// </summary>
         public void RoomRealizer_Update(ILContext il)
