@@ -19,7 +19,7 @@ using MonoMod.RuntimeDetour.HookGen;
 
 namespace SplitScreenCoop
 {
-    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.1")]
+    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.3")]
     public partial class SplitScreenCoop : BaseUnityPlugin
     {
         public void OnEnable()
@@ -132,6 +132,11 @@ namespace SplitScreenCoop
                 On.Creature.FlyAwayFromRoom += Creature_FlyAwayFromRoom; // Player taken by vulture? die quicker please
                 HookEndpointManager.Modify(typeof(RegionGate).GetProperty("MeetRequirement").GetGetMethod(), // don't assume player[0].realizedcreature
                     new ILContext.Manipulator(RegionGate_get_MeetRequirement));
+                On.ProcessManager.IsGameInMultiplayerContext += ProcessManager_IsGameInMultiplayerContext; // :pensive:
+
+                On.Menu.SlugcatSelectMenu.StartGame += SlugcatSelectMenu_StartGame;
+                On.Player.ChangeCameraToPlayer += Player_ChangeCameraToPlayer;
+
 
                 // Shader shenanigans
                 // wrapped calls to store shader globals
@@ -162,6 +167,22 @@ namespace SplitScreenCoop
             {
                 orig(self);
                 selfSufficientCoop = !ModManager.JollyCoop;
+                if (selfSufficientCoop)
+                {
+                    try
+                    {
+                        self.RequestPlayerSignIn(1, null);
+                        self.options.ResetJoysticks(false, true);
+                        //Logger.LogInfo("handler is " + self.GetPlayerHandler(1));
+                        //Logger.LogInfo("raw handler is " + self.GetPlayerHandlerRaw(1));
+                        //Logger.LogInfo("issigning in is " + self.GetPlayerSigningIn(1));
+                        //Logger.LogInfo("profile is " + self.GetPlayerHandlerRaw(1).profile);
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.LogError(e);
+                    }
+                }
             }
         }
 
@@ -235,7 +256,7 @@ namespace SplitScreenCoop
                 c.EmitDelegate<Action<RainWorldGame>>((self) =>
                 {
                     Logger.LogInfo("RainWorldGame_ctor1 hookpoint");
-                    if (self.session.Players.Count > 1 && preferedSplitMode != SplitMode.NoSplit)
+                    if (self.IsStorySession && self.session.Players.Count > 1 && preferedSplitMode != SplitMode.NoSplit)
                     {
                         Logger.LogInfo("RainWorldGame_ctor1 creating roomcamera2");
                         var cams = self.cameras;
@@ -278,7 +299,7 @@ namespace SplitScreenCoop
             orig(self, manager);
 
             CurrentSplitMode = SplitMode.NoSplit;
-            if (self.session.Players.Count > 1 && self.cameras.Length > 1 && preferedSplitMode != SplitMode.NoSplit)
+            if (self.IsStorySession && self.session.Players.Count > 1 && self.cameras.Length > 1 && preferedSplitMode != SplitMode.NoSplit)
             {
                 Logger.LogInfo("camera2 detected");
                 self.cameras[1].MoveCamera(self.world.activeRooms[0], 0);
@@ -334,6 +355,7 @@ namespace SplitScreenCoop
         {
             orig(self);
 
+            if (!self.IsStorySession) return;
             if (self.GamePaused) return;
 
             if (self.cameras.Length > 1)

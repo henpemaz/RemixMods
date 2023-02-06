@@ -152,5 +152,37 @@ namespace SplitScreenCoop
                 throw;
             }
         }
+
+        // we are multiplayer
+        private bool ProcessManager_IsGameInMultiplayerContext(On.ProcessManager.orig_IsGameInMultiplayerContext orig, ProcessManager self)
+        {
+            if (self.currentMainLoop is RainWorldGame game && game.IsStorySession && selfSufficientCoop) return true;
+            return orig(self);
+        }
+
+        // do not the camera, jolly
+        private void Player_ChangeCameraToPlayer(On.Player.orig_ChangeCameraToPlayer orig, AbstractCreature cameraTarget, RoomCamera roomCamera)
+        {
+            if (roomCamera.game.cameras.Any(c => c!= null && c.followAbstractCreature == cameraTarget)) return; // you already own a camera, chill
+            orig(cameraTarget, roomCamera);
+        }
+
+        // 
+        private void SlugcatSelectMenu_StartGame(On.Menu.SlugcatSelectMenu.orig_StartGame orig, Menu.SlugcatSelectMenu self, SlugcatStats.Name storyGameCharacter)
+        {
+            if (selfSufficientCoop)
+            {
+                Logger.LogInfo("Requesting p2 rewired signin");
+                self.manager.rainWorld.RequestPlayerSignIn(1, null);
+                self.manager.rainWorld.options.ResetJoysticks(false, true);
+                //Logger.LogInfo("handler is " + self.manager.rainWorld.GetPlayerHandler(1));
+                //Logger.LogInfo("raw handler is " + self.manager.rainWorld.GetPlayerHandlerRaw(1));
+                //Logger.LogInfo("issigning in is " + self.manager.rainWorld.GetPlayerSigningIn(1));
+                //Logger.LogInfo("profile is " + self.manager.rainWorld.GetPlayerHandlerRaw(1).profile);
+
+            }
+            orig(self, storyGameCharacter);
+        }
+
     }
 }
