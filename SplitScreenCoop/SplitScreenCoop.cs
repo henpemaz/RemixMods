@@ -19,7 +19,7 @@ using MonoMod.RuntimeDetour.HookGen;
 
 namespace SplitScreenCoop
 {
-    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.3")]
+    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.5")]
     public partial class SplitScreenCoop : BaseUnityPlugin
     {
         public void OnEnable()
@@ -28,10 +28,19 @@ namespace SplitScreenCoop
             sLogger = Logger;
             On.RainWorld.OnModsInit += OnModsInit;
 
-            // need this early
-            On.Futile.Init += Futile_Init; // turn on cam2
-            On.Futile.UpdateCameraPosition += Futile_UpdateCameraPosition; // handle custom switcheroos
-            On.FScreen.ReinitRenderTexture += FScreen_ReinitRenderTexture; // new tech huh
+            try
+            {
+                // need this early
+                On.Futile.Init += Futile_Init; // turn on cam2
+                On.Futile.UpdateCameraPosition += Futile_UpdateCameraPosition; // handle custom switcheroos
+                On.FScreen.ReinitRenderTexture += FScreen_ReinitRenderTexture; // new tech huh
+            }
+            catch (Exception e)
+            {
+                Logger.LogError("Failed to initialize");
+                Logger.LogError(e);
+                throw;
+            }
 
             confPreferedSplitMode = Config.Bind("General",
                                          "preferedSplitMode",
@@ -134,9 +143,10 @@ namespace SplitScreenCoop
                     new ILContext.Manipulator(RegionGate_get_MeetRequirement));
                 On.ProcessManager.IsGameInMultiplayerContext += ProcessManager_IsGameInMultiplayerContext; // :pensive:
 
+                // jolly why
                 On.Menu.SlugcatSelectMenu.StartGame += SlugcatSelectMenu_StartGame;
-                On.Player.ChangeCameraToPlayer += Player_ChangeCameraToPlayer;
-
+                On.RoomCamera.ChangeCameraToPlayer += RoomCamera_ChangeCameraToPlayer;
+                IL.Player.TriggerCameraSwitch += Player_TriggerCameraSwitch;
 
                 // Shader shenanigans
                 // wrapped calls to store shader globals
@@ -173,10 +183,6 @@ namespace SplitScreenCoop
                     {
                         self.RequestPlayerSignIn(1, null);
                         self.options.ResetJoysticks(false, true);
-                        //Logger.LogInfo("handler is " + self.GetPlayerHandler(1));
-                        //Logger.LogInfo("raw handler is " + self.GetPlayerHandlerRaw(1));
-                        //Logger.LogInfo("issigning in is " + self.GetPlayerSigningIn(1));
-                        //Logger.LogInfo("profile is " + self.GetPlayerHandlerRaw(1).profile);
                     }
                     catch (Exception e)
                     {
@@ -284,7 +290,6 @@ namespace SplitScreenCoop
                 Logger.LogInfo("enabling player 2");
                 manager.rainWorld.setup.player2 = true;
             }
-            // manager.rainWorld.setup.startMap = "SU_S01";
 
             preferedSplitMode = confPreferedSplitMode.Value;
             alwaysSplit = confAlwaysSplit.Value;
@@ -303,7 +308,7 @@ namespace SplitScreenCoop
             {
                 Logger.LogInfo("camera2 detected");
                 self.cameras[1].MoveCamera(self.world.activeRooms[0], 0);
-                // MakeRealizer2(self);
+                // MakeRealizer2(self); // defered to when realizer1 has a follow-creature set
                 SetSplitMode(alwaysSplit ? preferedSplitMode : SplitMode.NoSplit, self);
             }
             else
@@ -378,7 +383,6 @@ namespace SplitScreenCoop
                 }
             }
 
-            realizer2?.Update();
             if (selfSufficientCoop)
             {
                 CoopUpdate(self);
@@ -474,7 +478,7 @@ namespace SplitScreenCoop
         /// </summary>
         public void AssignCameraToPlayer(RoomCamera camera, Player player)
         {
-            Logger.LogInfo("AssignCameraToPlayer " + player.playerState.playerNumber);
+            Logger.LogInfo($"AssignCameraToPlayer cam {camera.cameraNumber} to p {player.playerState.playerNumber}");
             camera.followAbstractCreature = player.abstractCreature;
             var newroom = player.room ?? player.abstractCreature.Room.realizedRoom;
             if (newroom != null && camera.room != null && camera.room != newroom)

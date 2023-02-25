@@ -160,14 +160,46 @@ namespace SplitScreenCoop
             return orig(self);
         }
 
-        // do not the camera, jolly
-        private void Player_ChangeCameraToPlayer(On.Player.orig_ChangeCameraToPlayer orig, AbstractCreature cameraTarget, RoomCamera roomCamera)
+        // Jolly still doesn't know how to do it proper
+        private void RoomCamera_ChangeCameraToPlayer(On.RoomCamera.orig_ChangeCameraToPlayer orig, RoomCamera self, AbstractCreature cameraTarget)
         {
-            if (roomCamera.game.cameras.Any(c => c!= null && c.followAbstractCreature == cameraTarget)) return; // you already own a camera, chill
-            orig(cameraTarget, roomCamera);
+            Logger.LogInfo("RoomCamera_ChangeCameraToPlayer");
+            if (cameraTarget.realizedCreature is Player player)
+            {
+                AssignCameraToPlayer(self, player);
+                // ChangeCameraToPlayer gets called before the camera gets a chance to initialize
+                if (self.hud == null) { self.FireUpSinglePlayerHUD(player); } 
+            }
+            orig(self, cameraTarget);
         }
 
-        // 
+        private void Player_TriggerCameraSwitch(ILContext il)
+        {
+            try
+            {
+                var c = new ILCursor(il);
+                c.GotoNext(MoveType.Before, // roomcam = 
+                    i => i.MatchStloc(out var _)
+                    );
+
+                // rcam on stack
+                c.Emit(OpCodes.Ldarg_0);
+                c.EmitDelegate((RoomCamera rc, Player self) => // use the cam that's my own or a cam that is free or cam0, in this order
+                {
+                    var wasrc = rc;
+                    rc = self.abstractCreature.world.game.cameras.FirstOrDefault(c => c.followAbstractCreature == self.abstractCreature);
+                    if (rc == null) self.abstractCreature.world.game.cameras.FirstOrDefault(c => IsCreatureDead(c.followAbstractCreature));
+                    if (rc == null) rc = wasrc;
+                    return rc;
+                });
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e);
+                throw;
+            }
+        }
+
         private void SlugcatSelectMenu_StartGame(On.Menu.SlugcatSelectMenu.orig_StartGame orig, Menu.SlugcatSelectMenu self, SlugcatStats.Name storyGameCharacter)
         {
             if (selfSufficientCoop)
@@ -175,11 +207,6 @@ namespace SplitScreenCoop
                 Logger.LogInfo("Requesting p2 rewired signin");
                 self.manager.rainWorld.RequestPlayerSignIn(1, null);
                 self.manager.rainWorld.options.ResetJoysticks(false, true);
-                //Logger.LogInfo("handler is " + self.manager.rainWorld.GetPlayerHandler(1));
-                //Logger.LogInfo("raw handler is " + self.manager.rainWorld.GetPlayerHandlerRaw(1));
-                //Logger.LogInfo("issigning in is " + self.manager.rainWorld.GetPlayerSigningIn(1));
-                //Logger.LogInfo("profile is " + self.manager.rainWorld.GetPlayerHandlerRaw(1).profile);
-
             }
             orig(self, storyGameCharacter);
         }
