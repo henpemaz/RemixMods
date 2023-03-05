@@ -46,7 +46,6 @@ namespace SpawnMenu
                 init = true;
                 Logger.LogInfo("OnModsInit");
 
-
                 On.Menu.PauseMenu.ctor += PauseMenu_ctor;
                 On.Menu.PauseMenu.Update += PauseMenu_Update;
                 On.Menu.PauseMenu.GrafUpdate += PauseMenu_GrafUpdate;
@@ -58,6 +57,10 @@ namespace SpawnMenu
                 On.ArenaBehaviors.SandboxEditor.AddIcon_IconSymbolData_Vector2_EntityID_bool_bool += SandboxEditor_AddIcon_IconSymbolData_Vector2_EntityID_bool_bool;
                 On.ArenaBehaviors.SandboxEditor.CreatureOrItemIcon.DrawSprites += CreatureOrItemIcon_DrawSprites;
 
+                On.ArenaBehaviors.SandboxEditor.EditCursor.Update += EditCursor_Update;
+                On.ArenaBehaviors.SandboxEditor.EditCursor.OverseerEyePos += EditCursor_OverseerEyePos;
+                new Hook(typeof(ArenaBehaviors.SandboxEditor.EditCursor).GetProperty("OverseerActive").GetGetMethod(), typeof(SpawnMenu).GetMethod("get_OverseerActive"), this);
+                IL.ArenaBehaviors.SandboxEditor.EditCursor.Update += EditCursor_Update1;
 
                 Logger.LogInfo("OnModsInit done");
 
@@ -72,6 +75,57 @@ namespace SpawnMenu
                 orig(self);
             }
         }
+
+        private void EditCursor_Update1(ILContext il)
+        {
+            try
+            {
+                var c = new ILCursor(il);
+                ILLabel skip = null;
+                c.GotoNext(i => i.MatchLdfld<ArenaBehaviors.SandboxEditor.EditCursor>("overseer"));
+                c.GotoNext(i => i.MatchBrfalse(out skip));
+                c.GotoPrev(i => i.MatchLdfld<ArenaBehaviors.SandboxEditor.EditCursor>("overseer"));
+                c.Index--;
+                c.Emit(OpCodes.Ldarg_0);
+                c.Emit<ArenaBehaviors.SandboxEditor.EditCursor>(OpCodes.Ldfld, "overseer");
+                c.Emit(OpCodes.Brfalse, skip);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e);
+                throw;
+            }
+        }
+
+        private Vector2 EditCursor_OverseerEyePos(On.ArenaBehaviors.SandboxEditor.EditCursor.orig_OverseerEyePos orig, ArenaBehaviors.SandboxEditor.EditCursor self, float timeStacker)
+        {
+            if(self.room.game.session is StoryGameSession)
+            {
+                if (self.room.game.Players[0].realizedCreature is Creature c) return c.firstChunk.pos;
+                return Vector2.zero;
+            }
+            return orig(self, timeStacker);
+        }
+
+        private void EditCursor_Update(On.ArenaBehaviors.SandboxEditor.EditCursor.orig_Update orig, ArenaBehaviors.SandboxEditor.EditCursor self, bool eu)
+        {
+            orig(self, eu);
+            if (self.room.game.session is StoryGameSession)
+            {
+                self.quality = 1f;
+            }
+        }
+
+        public delegate bool orig_OverseerActive(ArenaBehaviors.SandboxEditor.EditCursor self);
+        public bool get_OverseerActive(orig_OverseerActive orig, ArenaBehaviors.SandboxEditor.EditCursor self)
+        {
+            if (self.room.game.session is StoryGameSession)
+            {
+                return false;
+            }
+            return orig(self);
+        }
+
 
         // support being drawn by more than 1 cam
         private void CreatureOrItemIcon_DrawSprites(On.ArenaBehaviors.SandboxEditor.CreatureOrItemIcon.orig_DrawSprites orig, ArenaBehaviors.SandboxEditor.CreatureOrItemIcon self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
@@ -148,16 +202,10 @@ namespace SpawnMenu
                 sb.arenaSitting = new ArenaSitting(manager.arenaSetup.GetOrInitiateGameTypeSetup(ArenaSetup.GameTypeID.Sandbox), new MultiplayerUnlocks(manager.rainWorld.progression, new List<string>()));
                 sb.arenaSitting.gameTypeSetup.saveCreatures = true;
                 sb.game = game;
-                var os = new AbstractCreature(game.world, StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.Overseer), null, game.Players[0].pos, new EntityID());
-                os.realizedCreature = new Overseer(os, room.world) { room = room, extended = 0f }; // so cursor doesnt flicker
-                if (game.Players[0].realizedCreature != null)
-                {
-                    os.realizedCreature.mainBodyChunk.pos = game.Players[0].realizedCreature.mainBodyChunk.pos;
-                    os.realizedCreature.mainBodyChunk.lastPos = game.Players[0].realizedCreature.mainBodyChunk.lastPos;
-                }
+                
                 room.AddObject(new SandboxOverlayOwner(room, sb, !sb.PlayMode));
                 var session = game.session;
-                game.session = sb; // MSC tries to game.GetArenaSession
+                game.session = sb; // MSC tries to game.GetArenaSession unlike the basegame
                 sb.overlay.Initiate(false);
                 game.session = session;
                 for (int l = 0; l < SandboxEditorSelector.Width; l++)
@@ -190,10 +238,9 @@ namespace SpawnMenu
                 sb.editor.currentConfig = -1;
 
 
-                var c = new ArenaBehaviors.SandboxEditor.EditCursor(sb.editor, os.abstractAI as OverseerAbstractAI, 0, new Vector2(-1000, -1000));
+                var c = new ArenaBehaviors.SandboxEditor.EditCursor(sb.editor, null, 0, new Vector2(-1000, -1000));
                 sb.editor.cursors.Add(c);
                 room.AddObject(c);
-                (os.realizedCreature as Overseer).editCursor = c;
 
                 sb.overlay.sandboxEditorSelector.ConnectToEditor(sb.editor);
 
@@ -285,7 +332,7 @@ namespace SpawnMenu
             orig(self, timeStacker);
             if (!self.game.IsStorySession || self.game.pauseMenu == null) return;
             foreach (var cam in self.game.cameras) cam.DrawUpdate(0f, 1f);
-            //self.game.cameras[0].DrawUpdate(0f, 1f); // so icons and cursor also update otherwise this would get quite verbose in here
+            // so icons and cursor also update otherwise this would get quite verbose in here
             // timespeed 1 so audio doesnt glitch out
         }
 
@@ -309,8 +356,6 @@ namespace SpawnMenu
                     On.WorldCoordinate.ctor_int_int_int_int += WorldCoordinate_ctor;
 
                     currentRoomIndex = room.abstractRoom.index;
-                    //On.PathFinder.ctor += PathFinder_ctor;
-
 
                     foreach (var ico in editor.icons)
                     {
@@ -378,20 +423,11 @@ namespace SpawnMenu
                 self.game.world.singleRoomWorld = false;
                 On.WorldCoordinate.ctor_int_int_int_int -= WorldCoordinate_ctor;
                 On.World.GetAbstractRoom_int -= World_GetAbstractRoom_int;
-                //On.PathFinder.ctor -= PathFinder_ctor;
                 doDetour = false;
 
                 orig(self);
             }
         }
-
-        // this was needed at some point lol
-        //private void PathFinder_ctor(On.PathFinder.orig_ctor orig, PathFinder self, ArtificialIntelligence AI, World world, AbstractCreature creature)
-        //{
-        //    world.singleRoomWorld = world.abstractRooms.Length == 1;
-        //    orig(self, AI, world, creature);
-        //    world.singleRoomWorld = true;
-        //}
 
         // temp hooks during spawning
         private void WorldCoordinate_ctor(On.WorldCoordinate.orig_ctor_int_int_int_int orig, ref WorldCoordinate self, int room, int x, int y, int abstractNode)
