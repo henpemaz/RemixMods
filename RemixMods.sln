@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SplitScreenCoop", "SplitScr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fartificer", "Fartificer\Fartificer.csproj", "{F1C574F2-DA8B-4368-A847-5E83C5FAE0C5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpawnMenu", "SpawnMenu\SpawnMenu.csproj", "{784EFE37-AD0A-4AE0-8B69-37EAAE329F14}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{F1C574F2-DA8B-4368-A847-5E83C5FAE0C5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F1C574F2-DA8B-4368-A847-5E83C5FAE0C5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F1C574F2-DA8B-4368-A847-5E83C5FAE0C5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{784EFE37-AD0A-4AE0-8B69-37EAAE329F14}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{784EFE37-AD0A-4AE0-8B69-37EAAE329F14}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{784EFE37-AD0A-4AE0-8B69-37EAAE329F14}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{784EFE37-AD0A-4AE0-8B69-37EAAE329F14}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
