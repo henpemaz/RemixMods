@@ -16,15 +16,6 @@ namespace SplitScreenCoop
 
         public void CoopUpdate(RainWorldGame game)
         {
-            if(realizer2 != null)
-            {
-                realizer2.Update();
-            }
-            else
-            {
-                if (game.roomRealizer?.followCreature != null) MakeRealizer2(game);
-            }
-
             UpdatePlayerFood(game);
 
             coopActualGameover = false;

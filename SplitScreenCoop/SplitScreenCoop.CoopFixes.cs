@@ -206,7 +206,6 @@ namespace SplitScreenCoop
             {
                 Logger.LogInfo("Requesting p2 rewired signin");
                 self.manager.rainWorld.RequestPlayerSignIn(1, null);
-                self.manager.rainWorld.options.ResetJoysticks(false, true);
             }
             orig(self, storyGameCharacter);
         }

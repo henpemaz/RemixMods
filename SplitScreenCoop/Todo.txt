@@ -1,4 +1,16 @@
-﻿
+﻿Summary:
+Immediate stuff that can be worked on:
+- menu for current settings: alwayssplit, preferredsplitmode (for the 2 people out there who like vertical split)
+- smoother camera following
+- attempt at 3 and 4 camera modes
+- attempt at splitting the game in 2 or more windows, 2 or more monitors.
+
+Stuff related to the self-sufficient-coop, aka nonjollycoop
+- fix: play death gong on death
+- fix: detect player carried to den as missing so others can rest/travel
+- feature: separate remix-based color picker for player2
+- feature: save shelter of player2, wake up in that shelter
+
 Self-sufficient coop mode
 	done
 		since most people play with latency, easier mode is nice to have
@@ -24,6 +36,9 @@ Self-sufficient coop mode
 			player 1 controls 1 and 2?
 			study inptu system
 		
+		QOL minor stuff
+			doesn't do the gong on death (gameover skipped but should still player the sfx)
+
 		2-screen mode
 			for double screens or ultra-wide
 
@@ -32,9 +47,14 @@ Self-sufficient coop mode
 			preferred split mode dropdown
 				actually do revise these requirements
 
+		gates when player aten by lizor
+			no workie
+
 		fix realizer2
 			game unloaded player 2 as it was being CARRIED into another room
 				unreproduceable?
+			I think I broke this with jolly, jolly doesn't handle players splitting up so restore real2 asap
+				done?
 	
 		sleep (and wake up) in different shelters
 			store shelter of player2
@@ -48,3 +68,5 @@ splitscreen
 	smooth camera follow a little
 
 	3 and 4 cameras
+
+	custom colors when nojolly

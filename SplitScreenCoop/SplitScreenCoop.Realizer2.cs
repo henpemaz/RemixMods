@@ -46,7 +46,7 @@ namespace SplitScreenCoop
         {
             try
             {
-                // skip this.followCreature = cam[0].followCreature if this != game.roomRealizer
+                // skip this.followCreature = cam[0].followCreature if this != game.roomRealizer || game.cam[0].follow==null || would switch to follow already followed
                 var c = new ILCursor(il);
                 c.GotoNext(MoveType.Before,
                     i => i.MatchStfld<RoomRealizer>("followCreature"),
@@ -62,9 +62,12 @@ namespace SplitScreenCoop
                 c.Emit(OpCodes.Ldarg_0);
                 c.EmitDelegate((RoomRealizer self) =>
                 {
-                    if (self != self.world?.game?.roomRealizer || self.world?.game?.cameras[0].followAbstractCreature == null)
+                    if (self != self.world?.game?.roomRealizer // I'm realizer2
+                    || self.world?.game?.cameras[0].followAbstractCreature == null // or I'd assign null
+                    || (self.followCreature != null && realizer2 != null && self.world.game.cameras[0].followAbstractCreature == realizer2.followCreature) // or I'd reassign to a creature that is followed by re2
+                    )
                     {
-                        return true;
+                        return true; // then don't
                     }
                     return false;
                 });

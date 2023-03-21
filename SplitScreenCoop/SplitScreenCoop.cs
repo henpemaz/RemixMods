@@ -19,7 +19,7 @@ using MonoMod.RuntimeDetour.HookGen;
 
 namespace SplitScreenCoop
 {
-    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.5")]
+    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.6")]
     public partial class SplitScreenCoop : BaseUnityPlugin
     {
         public void OnEnable()
@@ -182,7 +182,6 @@ namespace SplitScreenCoop
                     try
                     {
                         self.RequestPlayerSignIn(1, null);
-                        self.options.ResetJoysticks(false, true);
                     }
                     catch (Exception e)
                     {
@@ -308,7 +307,6 @@ namespace SplitScreenCoop
             {
                 Logger.LogInfo("camera2 detected");
                 self.cameras[1].MoveCamera(self.world.activeRooms[0], 0);
-                // MakeRealizer2(self); // defered to when realizer1 has a follow-creature set
                 SetSplitMode(alwaysSplit ? preferedSplitMode : SplitMode.NoSplit, self);
             }
             else
@@ -380,6 +378,18 @@ namespace SplitScreenCoop
                 if (CurrentSplitMode != SplitMode.NoSplit && main.room.abstractRoom.name == "SB_L01") // honestly jolly
                 {
                     ConsiderColapsing(self);
+                }
+            }
+
+            if(self.Players.Count > 1)
+            {
+                if (realizer2 != null)
+                {
+                    realizer2.Update();
+                }
+                else
+                {
+                    if (self.roomRealizer?.followCreature != null) MakeRealizer2(self);
                 }
             }
 
