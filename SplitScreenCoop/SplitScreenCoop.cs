@@ -22,6 +22,21 @@ namespace SplitScreenCoop
     [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.6")]
     public partial class SplitScreenCoop : BaseUnityPlugin
     {
+        public static SplitScreenCoopOptions Options;
+
+        public SplitScreenCoop()
+        {
+            try
+            {
+                Options = new SplitScreenCoopOptions(this, Logger);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex);
+                throw;
+            }
+        }
+        
         public void OnEnable()
         {
             Logger.LogInfo("OnEnable");
@@ -41,19 +56,7 @@ namespace SplitScreenCoop
                 Logger.LogError(e);
                 throw;
             }
-
-            confPreferedSplitMode = Config.Bind("General",
-                                         "preferedSplitMode",
-                                         SplitMode.SplitVertical,
-                                         "Preferred split mode");
-            confAlwaysSplit = Config.Bind("General",
-                                         "alwaysSplit",
-                                         false,
-                                         "Permanent split mode");
         }
-
-        public ConfigEntry<SplitMode> confPreferedSplitMode;
-        public ConfigEntry<bool> confAlwaysSplit;
 
         public enum SplitMode
         {
@@ -164,6 +167,9 @@ namespace SplitScreenCoop
                     typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalFloat"), this);
                 new Hook(typeof(Shader).GetMethod("SetGlobalTexture", new Type[] { typeof(string), typeof(Texture) }),
                     typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalTexture"), this);
+                
+                // Register OptionsInterface
+                MachineConnector.SetRegisteredOI("henpemaz_splitscreencoop", Options);
 
                 Logger.LogInfo("OnModsInit done");
 
@@ -290,8 +296,8 @@ namespace SplitScreenCoop
                 manager.rainWorld.setup.player2 = true;
             }
 
-            preferedSplitMode = confPreferedSplitMode.Value;
-            alwaysSplit = confAlwaysSplit.Value;
+            preferedSplitMode = Options.PreferredSplitMode.Value;
+            alwaysSplit = Options.AlwaysSplit.Value;
 
             for (int i = 0; i < cameraListeners.Length; i++)
             {
