@@ -10,12 +10,25 @@ namespace SplitScreenCoop;
 
 public class SplitScreenCoopOptions : OptionInterface
 {
-    public readonly ManualLogSource Logger;
-    public SplitScreenCoopOptions(SplitScreenCoop modInstance, ManualLogSource loggerSource)
+    class BetterComboBox : OpComboBox
     {
-        Logger = loggerSource;
-        PreferredSplitMode = this.config.Bind<SplitScreenCoop.SplitMode>("PreferredSplitMode", SplitScreenCoop.SplitMode.SplitVertical);
-        AlwaysSplit = this.config.Bind<bool>("AlwaysSplit", false);
+        public BetterComboBox(ConfigurableBase configBase, Vector2 pos, float width, List<ListItem> list) : base(configBase, pos, width, list) { }
+        public override void GrafUpdate(float timeStacker)
+        {
+            base.GrafUpdate(timeStacker);
+            if(this._rectList != null && !_rectList.isHidden)
+            {
+                for (int j = 0; j < 9; j++)
+                {
+                    this._rectList.sprites[j].alpha = 1;
+                }
+            }
+        }
+    }
+    public SplitScreenCoopOptions()
+    {
+        PreferredSplitMode = this.config.Bind("PreferredSplitMode", SplitScreenCoop.SplitMode.SplitVertical);
+        AlwaysSplit = this.config.Bind("AlwaysSplit", false);
     }
     
     public readonly Configurable<SplitScreenCoop.SplitMode> PreferredSplitMode;
@@ -25,39 +38,20 @@ public class SplitScreenCoopOptions : OptionInterface
     public override void Initialize()
     {
         var opTab = new OpTab(this, "Options");
-        this.Tabs = new[]
-        {
-            opTab
-        };
+        this.Tabs = new[] { opTab };
 
         UIArrOptions = new UIelement[]
         {
             new OpLabel(10f, 550f, "General", true),
-            
-            new OpLabel(10f, 520, "Split Mode") { verticalAlignment = OpLabel.LabelVAlignment.Center },
-            new OpComboBox(PreferredSplitMode, new Vector2(10f, 490), 200f, OpResourceSelector.GetEnumNames(null, typeof(SplitScreenCoop.SplitMode)).ToList()),
 
             new OpCheckBox(AlwaysSplit, 10f, 450),
             new OpLabel(40f, 450, "Permanent split mode") { verticalAlignment = OpLabel.LabelVAlignment.Center },
-        };
-        
-        // Permanent split option pokes through the ComboBox and looks ugly, hide it
-        ((OpComboBox)UIArrOptions[2]).OnListOpen += delegate(UIfocusable trigger)
-        {
-            UIArrOptions[3].Hide();
-            UIArrOptions[4].Hide();
-        };
-        ((OpComboBox)UIArrOptions[2]).OnListClose += delegate(UIfocusable trigger)
-        {
-            UIArrOptions[3].Show();
-            UIArrOptions[4].Show();
+
+            new OpLabel(10f, 520, "Split Mode") { verticalAlignment = OpLabel.LabelVAlignment.Center },
+            new BetterComboBox(PreferredSplitMode, new Vector2(10f, 490), 200f, OpResourceSelector.GetEnumNames(null, typeof(SplitScreenCoop.SplitMode)).ToList()),
         };
         
         // Add items to the tab
         opTab.AddItems(UIArrOptions);
-    }
-
-    public override void Update()
-    {
     }
 }

@@ -19,23 +19,10 @@ using MonoMod.RuntimeDetour.HookGen;
 
 namespace SplitScreenCoop
 {
-    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.6")]
+    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.7")]
     public partial class SplitScreenCoop : BaseUnityPlugin
     {
         public static SplitScreenCoopOptions Options;
-
-        public SplitScreenCoop()
-        {
-            try
-            {
-                Options = new SplitScreenCoopOptions(this, Logger);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex);
-                throw;
-            }
-        }
         
         public void OnEnable()
         {
@@ -83,9 +70,9 @@ namespace SplitScreenCoop
         {
             if (Input.GetKeyDown("f8"))
             {
-                if (preferedSplitMode == SplitMode.NoSplit) return;
                 if (preferedSplitMode == SplitMode.SplitHorizontal) preferedSplitMode = SplitMode.SplitVertical;
                 else if (preferedSplitMode == SplitMode.SplitVertical) preferedSplitMode = SplitMode.SplitHorizontal;
+                else return;
                 if (CurrentSplitMode != SplitMode.NoSplit && GameObject.FindObjectOfType<RainWorld>()?.processManager?.currentMainLoop is RainWorldGame game)
                     SetSplitMode(preferedSplitMode, game);
             }
@@ -95,10 +82,13 @@ namespace SplitScreenCoop
         {
             try
             {
+                // Register OptionsInterface
+                Options = Options ?? new SplitScreenCoopOptions();
+                MachineConnector.SetRegisteredOI("henpemaz_splitscreencoop", Options);
+
                 if (init) return;
                 init = true;
                 Logger.LogInfo("OnModsInit");
-
 
                 // splitscreen functionality
                 IL.RainWorldGame.ctor += RainWorldGame_ctor1;
@@ -167,9 +157,6 @@ namespace SplitScreenCoop
                     typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalFloat"), this);
                 new Hook(typeof(Shader).GetMethod("SetGlobalTexture", new Type[] { typeof(string), typeof(Texture) }),
                     typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalTexture"), this);
-                
-                // Register OptionsInterface
-                MachineConnector.SetRegisteredOI("henpemaz_splitscreencoop", Options);
 
                 Logger.LogInfo("OnModsInit done");
 
@@ -495,6 +482,7 @@ namespace SplitScreenCoop
         public void AssignCameraToPlayer(RoomCamera camera, Player player)
         {
             Logger.LogInfo($"AssignCameraToPlayer cam {camera.cameraNumber} to p {player.playerState.playerNumber}");
+            Logger.LogInfo(Environment.StackTrace);
             camera.followAbstractCreature = player.abstractCreature;
             var newroom = player.room ?? player.abstractCreature.Room.realizedRoom;
             if (newroom != null && camera.room != null && camera.room != newroom)
@@ -511,9 +499,13 @@ namespace SplitScreenCoop
         public void OffsetHud(RoomCamera self)
         {
             Vector2 offset = camOffsets[self.cameraNumber];
-            if (CurrentSplitMode != SplitMode.NoSplit)
+            if (CurrentSplitMode == SplitMode.SplitHorizontal)
             {
-                offset += (CurrentSplitMode == SplitMode.SplitHorizontal ? new Vector2(0, self.sSize.y / 4f) : new Vector2(self.sSize.x / 4f, 0));
+                offset += new Vector2(0, self.sSize.y / 4f);
+            }
+            else if(CurrentSplitMode == SplitMode.SplitVertical)
+            {
+                offset += new Vector2(self.sSize.x / 4f, 0);
             }
             self.ReturnFContainer("HUD").SetPosition(offset);
             self.ReturnFContainer("HUD2").SetPosition(offset);

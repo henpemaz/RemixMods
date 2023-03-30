@@ -415,6 +415,7 @@
     <Compile Include="SplitScreenCoop.Multicamera.cs" />
     <Compile Include="SplitScreenCoop.Realizer2.cs" />
     <Compile Include="SplitScreenCoop.ShaderShenanigans.cs" />
+    <Compile Include="SplitScreenCoopOptions.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Mod\modinfo.json" />
