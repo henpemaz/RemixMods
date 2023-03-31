@@ -29,17 +29,19 @@ public class SplitScreenCoopOptions : OptionInterface
     {
         PreferredSplitMode = this.config.Bind("PreferredSplitMode", SplitScreenCoop.SplitMode.SplitVertical);
         AlwaysSplit = this.config.Bind("AlwaysSplit", false);
+        DualDisplays = this.config.Bind("DualDisplays", false);
     }
-    
+
     public readonly Configurable<SplitScreenCoop.SplitMode> PreferredSplitMode;
     public readonly Configurable<bool> AlwaysSplit;
+    public readonly Configurable<bool> DualDisplays;
     private UIelement[] UIArrOptions;
 
     public override void Initialize()
     {
         var opTab = new OpTab(this, "Options");
         this.Tabs = new[] { opTab };
-
+        OpCheckBox e;
         UIArrOptions = new UIelement[]
         {
             new OpLabel(10f, 550f, "General", true),
@@ -47,9 +49,15 @@ public class SplitScreenCoopOptions : OptionInterface
             new OpCheckBox(AlwaysSplit, 10f, 450),
             new OpLabel(40f, 450, "Permanent split mode") { verticalAlignment = OpLabel.LabelVAlignment.Center },
 
+            e = new OpCheckBox(DualDisplays, 10f, 380) { description = "Requires two physical displays" },
+            new OpLabel(40f, 380, "Dual Display (experimental)") { verticalAlignment = OpLabel.LabelVAlignment.Center },
+            
+            // added last due to overlap
             new OpLabel(10f, 520, "Split Mode") { verticalAlignment = OpLabel.LabelVAlignment.Center },
             new BetterComboBox(PreferredSplitMode, new Vector2(10f, 490), 200f, OpResourceSelector.GetEnumNames(null, typeof(SplitScreenCoop.SplitMode)).ToList()),
         };
+
+        e.greyedOut = !SplitScreenCoop.DualDisplaySupported();
         
         // Add items to the tab
         opTab.AddItems(UIArrOptions);

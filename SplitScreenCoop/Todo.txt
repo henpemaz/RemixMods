@@ -70,3 +70,16 @@ splitscreen
 	3 and 4 cameras
 
 	custom colors when nojolly
+
+Multiple displays
+	It requires being in full screen, or will force full screen
+
+	If this mode is active, the game should be in double-display mode, even in menus
+		in menus ideally displays should be mirrored
+
+	turning this mode on will force fullscreen and initialize a second display
+	turning this mode on requires extra displays available
+	if this mode is already on and there's no extra displays, revert to default split
+
+	turning this mode off from the menu warns that a restart is required
+

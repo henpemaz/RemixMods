@@ -1,5 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using Newtonsoft.Json.Linq;
+using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace SplitScreenCoop
 {
@@ -12,7 +16,8 @@ namespace SplitScreenCoop
         /// </summary>
         public class CameraListener : MonoBehaviour
         {
-            public RoomCamera roomCamera;
+            public Camera fcamera;
+            public Display display;
             public RenderTexture renderTexture;
             public Dictionary<string, Color> ShaderColors = new Dictionary<string, Color>();
             public Dictionary<string, Vector4> ShaderVectors = new Dictionary<string, Vector4>();
@@ -20,105 +25,96 @@ namespace SplitScreenCoop
             public Dictionary<string, Texture> ShaderTextures = new Dictionary<string, Texture>();
             public Rect sourceRect;
             public Rect targetRect;
-            public bool mapped;
-            public bool _skip;
             public int srcX;
             public int srcY;
             public int srcWidth;
             public int srcHeight;
             public int dstX;
             public int dstY;
+            
 
+            public bool _direct = true;
             /// <summary>
             /// bypass intermediate rendertexture and blit
             /// </summary>
-            public bool skip
+            public bool direct
             {
-                get => _skip; internal set
+                get => _direct; set
                 {
-                    _skip = value;
-                    if (roomCamera != null)
+                    _direct = value;
+                    if (!_direct && renderTexture == null) ReinitRenderTexture();
+                    Retarget();
+                }
+            }
+
+            public bool mirrorMain
+            {
+                set
+                {
+                    if (display != Display.main)
                     {
-                        //sLogger.LogInfo("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + " set skip " + value);
-                        fcameras[roomCamera.cameraNumber].targetTexture = _skip ? Futile.screen.renderTexture : this.renderTexture;
+                        fcamera.enabled = !value;
+                        display.Extras().MapToTexture(value ? Futile.screen.renderTexture : display.Extras().renderTexture);
                     }
                 }
             }
 
-            public void OnDestroy()
+            public void Retarget()
             {
-                ShaderTextures.Clear();
-                roomCamera = null;
-                if (renderTexture != null)
-                {
-                    renderTexture.Release();
-                    renderTexture.DiscardContents();
-                    renderTexture = null;
-                }
+                fcamera.targetTexture = _direct ? display.Extras().renderTexture : this.renderTexture;
             }
 
-            public void Destroy()
-            {
-                ShaderTextures.Clear();
-                roomCamera = null;
-                if (renderTexture != null)
-                {
-                    renderTexture.Release();
-                    renderTexture.DiscardContents();
-                    renderTexture = null;
-                }
-                Destroy(this);
-            }
-
-            public void ReinitRenderTexture()
-            {
-                //sLogger.LogInfo("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + " ReinitRenderTexture");
-                if (renderTexture != null)
-                {
-                    renderTexture.Release();
-                    renderTexture.DiscardContents();
-                }
-                renderTexture = new RenderTexture(Futile.screen.renderTexture);
-                if (mapped)
-                {
-                    SetMap(this.sourceRect, this.targetRect);
-                }
-            }
 
             /// <summary>
             /// Effectively ctor
             /// </summary>
-            public void AttachTo(RoomCamera self)
+            public void AttachTo(Camera fcamera, Display display)
             {
-                roomCamera = self;
-                sLogger.LogInfo("CameraListener attached to roomcamera #" + self.cameraNumber);
+                this.fcamera = fcamera;
+                this.display = display;
                 ReinitRenderTexture();
-                fcameras[self.cameraNumber].targetTexture = renderTexture;
+                Retarget();
             }
 
+            public void DiscardRenderTexture()
+            {
+                if (renderTexture != null)
+                {
+                    renderTexture.Release();
+                    renderTexture.DiscardContents();
+                    renderTexture = null;
+                }
+            }
+
+            public void ReinitRenderTexture()
+            {
+                DiscardRenderTexture();
+                display.Extras().ReinitRenderTexture();
+                if (!direct)
+                {
+                    renderTexture = new RenderTexture(Futile.screen.renderTexture);
+                    SetMap(this.sourceRect, this.targetRect);
+                }
+            }
+            
             /// <summary>
             /// Camera.rect but for our custom blit
             /// </summary>
             public void SetMap(Rect sourceRect, Rect targetRect)
             {
-                //sLogger.LogInfo("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + " SetMap");
-                if (renderTexture != null)
-                {
-                    var h = renderTexture.height;
-                    var w = renderTexture.width;
-                    srcX = Mathf.FloorToInt(w * sourceRect.x);
-                    srcY = Mathf.FloorToInt(h * sourceRect.y);
-                    srcWidth = Mathf.FloorToInt(w * sourceRect.width);
-                    srcHeight = Mathf.FloorToInt(h * sourceRect.height);
-                    dstX = Mathf.FloorToInt(w * targetRect.x);
-                    dstY = Mathf.FloorToInt(h * targetRect.y);
-                }
+                var h = renderTexture.height;
+                var w = renderTexture.width;
+                srcX = Mathf.FloorToInt(w * sourceRect.x);
+                srcY = Mathf.FloorToInt(h * sourceRect.y);
+                srcWidth = Mathf.FloorToInt(w * sourceRect.width);
+                srcHeight = Mathf.FloorToInt(h * sourceRect.height);
+                dstX = Mathf.FloorToInt(w * targetRect.x);
+                dstY = Mathf.FloorToInt(h * targetRect.y);
                 this.sourceRect = sourceRect;
                 this.targetRect = targetRect;
-
-                mapped = true;
             }
 
+            
             /// <summary>
             /// Apply shader vars from this roomcamera
             /// </summary>
@@ -135,11 +131,29 @@ namespace SplitScreenCoop
             /// </summary>
             public void OnPostRender()
             {
-                if (renderTexture != null && !_skip && mapped)
+                if (!_direct)
                 {
-                    //sLogger.LogInfo("CameraListener attached to roomcamera #" + roomCamera?.cameraNumber + "  Rendering");
                     Graphics.CopyTexture(renderTexture, 0, 0, srcX, srcY, srcWidth, srcHeight, Futile.screen.renderTexture, 0, 0, dstX, dstY);
                 }
+            }
+
+            public void OnDestroy()
+            {
+                ShaderTextures.Clear();
+                fcamera = null;
+                display = null;
+                if (renderTexture != null)
+                {
+                    renderTexture.Release();
+                    renderTexture.DiscardContents();
+                    renderTexture = null;
+                }
+            }
+
+            internal void BindToDisplay(Display display)
+            {
+                this.display = display;
+                Retarget();
             }
         }
     }

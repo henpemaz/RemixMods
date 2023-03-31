@@ -412,6 +412,7 @@
     <Compile Include="SplitScreenCoop.CoopFixes.cs" />
     <Compile Include="SplitScreenCoop.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SplitScreenCoop.DisplayExtras.cs" />
     <Compile Include="SplitScreenCoop.Multicamera.cs" />
     <Compile Include="SplitScreenCoop.Realizer2.cs" />
     <Compile Include="SplitScreenCoop.ShaderShenanigans.cs" />

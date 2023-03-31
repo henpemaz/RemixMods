@@ -13,10 +13,9 @@ namespace SplitScreenCoop
         /// </summary>
         public Vector2 DialogBox_DrawPos(On.HUD.DialogBox.orig_DrawPos orig, HUD.DialogBox self, float timeStacker)
         {
-            // maybe instead of cl.roomcamera we could go self.hud.camera ?
-            if (CurrentSplitMode == SplitMode.SplitVertical && curCamera >= 0 && cameraListeners[curCamera] is CameraListener cl)
+            if (CurrentSplitMode == SplitMode.SplitVertical)
             {
-                return orig(self, timeStacker) - new Vector2(cl.roomCamera.sSize.x / 4f, 0f);
+                return orig(self, timeStacker) - new Vector2(self.hud.rainWorld.screenSize.x / 4f, 0f);
             }
             return orig(self, timeStacker);
         }
@@ -28,7 +27,6 @@ namespace SplitScreenCoop
         {
             if (self.camera.cameraNumber > 0 && self.camera.room == self.camera.game.cameras[0].room)
             {
-                self.volumeGroups[0] *= 1f;
                 if (self.camera.game.cameras[0].virtualMicrophone is VirtualMicrophone other)
                 {
                     self.volumeGroups[0] *= Mathf.InverseLerp(100f, 1000f, (self.listenerPoint - other.listenerPoint).magnitude);
