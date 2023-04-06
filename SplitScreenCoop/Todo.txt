@@ -1,9 +1,13 @@
 ﻿Summary:
 Immediate stuff that can be worked on:
 - menu for current settings: alwayssplit, preferredsplitmode (for the 2 people out there who like vertical split)
+	done - thanks Noir!
 - smoother camera following
+- smarter jolly camera switching
+	for instance if there's only 2 players a lot can be simplified
 - attempt at 3 and 4 camera modes
 - attempt at splitting the game in 2 or more windows, 2 or more monitors.
+	done
 
 Stuff related to the self-sufficient-coop, aka nonjollycoop
 - fix: play death gong on death
@@ -12,6 +16,8 @@ Stuff related to the self-sufficient-coop, aka nonjollycoop
 - feature: save shelter of player2, wake up in that shelter
 
 Self-sufficient coop mode
+	apparently saving is broken? 2 reports, needs testing
+		saving in selfsufficient coop
 	done
 		since most people play with latency, easier mode is nice to have
 			shared food meter

@@ -5,12 +5,10 @@ using System.Security;
 using System.Security.Permissions;
 using UnityEngine;
 using BepInEx;
-using BepInEx.Configuration;
 using MonoMod.RuntimeDetour;
 using MonoMod.Cil;
 using Mono.Cecil.Cil;
 using BepInEx.Logging;
-using System.Runtime.InteropServices;
 using MonoMod.RuntimeDetour.HookGen;
 using System.Collections.Generic;
 
@@ -20,7 +18,7 @@ using System.Collections.Generic;
 
 namespace SplitScreenCoop
 {
-    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.7")]
+    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.8")]
     public partial class SplitScreenCoop : BaseUnityPlugin
     {
         public static SplitScreenCoopOptions Options;
@@ -197,12 +195,6 @@ namespace SplitScreenCoop
             }
         }
 
-        private void Player_ctor(On.Player.orig_ctor orig, Player self, AbstractCreature abstractCreature, World world)
-        {
-            orig(self, abstractCreature, world);
-            self.cameraSwitchDelay = -1; // there
-        }
-
         public void ReadSettings()
         {
             preferedSplitMode = Options.PreferredSplitMode.Value;
@@ -217,6 +209,7 @@ namespace SplitScreenCoop
             }
             else
             {
+                cameraListeners[1]?.BindToDisplay(Display.main);
                 dualDisplays = false;
             }
         }
@@ -275,7 +268,7 @@ namespace SplitScreenCoop
         }
 
         /// <summary>
-        /// Apply better offsets in multicam mode
+        /// Apply better offsets in multicam mode, vanilla ones weren't good
         /// </summary>
         public void Futile_UpdateCameraPosition(On.Futile.orig_UpdateCameraPosition orig, Futile self)
         {
@@ -334,19 +327,18 @@ namespace SplitScreenCoop
         public void RainWorldGame_ctor(On.RainWorldGame.orig_ctor orig, RainWorldGame self, ProcessManager manager)
         {
             Logger.LogInfo("RainWorldGame_ctor");
+            ReadSettings();
             if (selfSufficientCoop)
             {
                 Logger.LogInfo("enabling player 2");
                 manager.rainWorld.setup.player2 = true;
             }
 
-            ReadSettings();
-
             realizer2 = null;
+            CurrentSplitMode = SplitMode.NoSplit;
 
             orig(self, manager);
 
-            CurrentSplitMode = SplitMode.NoSplit;
             if (self.cameras.Length > 1)
             {
                 Logger.LogInfo("camera2 detected");
@@ -370,7 +362,7 @@ namespace SplitScreenCoop
         {
             Logger.LogInfo("RoomCamera_ctor1 for camera #" + cameraNumber);
             orig(self, game, cameraNumber);
-            self.splitScreenMode = false;
+            self.splitScreenMode = false; // don't, mine is better
             self.offset = Vector2.zero;
             foreach (var c in self.SpriteLayers) c.SetPosition(camOffsets[self.cameraNumber]);
         }
@@ -382,7 +374,7 @@ namespace SplitScreenCoop
         {
             Logger.LogInfo("RainWorldGame_ShutDownProcess cleanups");
             SetSplitMode(SplitMode.NoSplit, self);
-            if (dualDisplays)
+            if (dualDisplays && DualDisplaySupported())
             {
                 cameraListeners[1].mirrorMain = true;
             }
@@ -474,16 +466,18 @@ namespace SplitScreenCoop
                             break;
                         case SplitMode.SplitHorizontal:
                             Logger.LogInfo("SplitHorizontal");
-                            cameraListeners[0].SetMap(new Rect(0f, 0.25f, 1f, 0.5f), new Rect(0f, 0.5f, 1f, 0.5f));
                             cameraListeners[0].direct = false;
+                            cameraListeners[0].SetMap(new Rect(0f, 0.25f, 1f, 0.5f), new Rect(0f, 0.5f, 1f, 0.5f));
                             fcameras[1].enabled = true;
+                            cameraListeners[1].direct = false;
                             cameraListeners[1].SetMap(new Rect(0f, 0.25f, 1f, 0.5f), new Rect(0f, 0f, 1f, 0.5f));
                             break;
                         case SplitMode.SplitVertical:
                             Logger.LogInfo("SplitVertical");
-                            cameraListeners[0].SetMap(new Rect(0.25f, 0f, 0.5f, 1f), new Rect(0f, 0f, 0.5f, 1f));
                             cameraListeners[0].direct = false;
+                            cameraListeners[0].SetMap(new Rect(0.25f, 0f, 0.5f, 1f), new Rect(0f, 0f, 0.5f, 1f));
                             fcameras[1].enabled = true;
+                            cameraListeners[1].direct = false;
                             cameraListeners[1].SetMap(new Rect(0.25f, 0f, 0.5f, 1f), new Rect(0.5f, 0f, 0.5f, 1f));
                             break;
                         default:

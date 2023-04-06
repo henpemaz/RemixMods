@@ -42,7 +42,6 @@ namespace SplitScreenCoop
                 get => _direct; set
                 {
                     _direct = value;
-                    if (!_direct && renderTexture == null) ReinitRenderTexture();
                     Retarget();
                 }
             }
@@ -76,7 +75,7 @@ namespace SplitScreenCoop
                 Retarget();
             }
 
-            public void DiscardRenderTexture()
+            public void ReinitRenderTexture()
             {
                 if (renderTexture != null)
                 {
@@ -84,17 +83,9 @@ namespace SplitScreenCoop
                     renderTexture.DiscardContents();
                     renderTexture = null;
                 }
-            }
-
-            public void ReinitRenderTexture()
-            {
-                DiscardRenderTexture();
                 display.Extras().ReinitRenderTexture();
-                if (!direct)
-                {
-                    renderTexture = new RenderTexture(Futile.screen.renderTexture);
-                    SetMap(this.sourceRect, this.targetRect);
-                }
+                renderTexture = new RenderTexture(Futile.screen.renderTexture);
+                SetMap(this.sourceRect, this.targetRect);
             }
             
             /// <summary>

@@ -168,7 +168,7 @@ namespace SplitScreenCoop
             {
                 AssignCameraToPlayer(self, player);
                 // ChangeCameraToPlayer gets called before the camera gets a chance to initialize
-                if (self.hud == null) { self.FireUpSinglePlayerHUD(player); } 
+                if (self.hud == null) { self.FireUpSinglePlayerHUD(player); }
             }
             orig(self, cameraTarget);
         }
@@ -198,6 +198,13 @@ namespace SplitScreenCoop
                 Logger.LogError(e);
                 throw;
             }
+        }
+
+        // $15
+        private void Player_ctor(On.Player.orig_ctor orig, Player self, AbstractCreature abstractCreature, World world)
+        {
+            orig(self, abstractCreature, world);
+            self.cameraSwitchDelay = -1; // there, you can have your fix, for free
         }
 
         private void SlugcatSelectMenu_StartGame(On.Menu.SlugcatSelectMenu.orig_StartGame orig, Menu.SlugcatSelectMenu self, SlugcatStats.Name storyGameCharacter)
