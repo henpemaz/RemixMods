@@ -8,6 +8,7 @@ Immediate stuff that can be worked on:
 - attempt at 3 and 4 camera modes
 - attempt at splitting the game in 2 or more windows, 2 or more monitors.
 	done
+- visual separator when in split mode
 
 Stuff related to the self-sufficient-coop, aka nonjollycoop
 - fix: play death gong on death
