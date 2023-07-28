@@ -63,9 +63,16 @@ namespace SplitScreenCoop
         public static bool alwaysSplit;
         public static bool dualDisplays;
 
-        public static Camera[] fcameras = new Camera[2];
-        public static CameraListener[] cameraListeners = new CameraListener[2];
+        public static Camera[] fcameras = new Camera[4];
+        public static CameraListener[] cameraListeners = new CameraListener[4];
         public static List<DisplayExtras> displayExtras = new();
+
+        public static Camera camera2;
+        public static Camera camera3;
+        public static Camera camera4;
+        public static GameObject cameraHolder2;
+        public static GameObject cameraHolder3;
+        public static GameObject cameraHolder4;
 
         public static Vector2[] camOffsets = new Vector2[] { new Vector2(0, 0), new Vector2(32000, 0), new Vector2(0, 32000), new Vector2(32000, 32000) }; // one can dream
 
@@ -85,6 +92,12 @@ namespace SplitScreenCoop
                 else return;
                 if (CurrentSplitMode != SplitMode.NoSplit && GameObject.FindObjectOfType<RainWorld>()?.processManager?.currentMainLoop is RainWorldGame game)
                     SetSplitMode(preferedSplitMode, game);
+            }
+            if (Input.GetKeyDown("f9"))
+            {
+                RainWorldGame game = (RainWorldGame)GameObject.FindObjectOfType<RainWorld>()?.processManager?.currentMainLoop;
+                for (int i = 0; i < game.session.Players.Count; i++)
+                    AssignCameraToPlayer(game.cameras[i], (Player)game.session.Players[i].realizedCreature);
             }
         }
 
@@ -235,21 +248,34 @@ namespace SplitScreenCoop
             orig(self, futileParams);
 
             Logger.LogInfo("Futile_Init creating camera2");
-            self._cameraHolder2 = new GameObject();
-            self._cameraHolder2.transform.parent = self.gameObject.transform;
-            self._camera2 = self._cameraHolder2.AddComponent<Camera>();
-            self.InitCamera(self._camera2, 2);
 
-            fcameras = new Camera[] { self.camera, self.camera2 };
+            cameraHolder2 = new GameObject();
+            cameraHolder2.transform.parent = self.gameObject.transform;
+            camera2 = cameraHolder2.AddComponent<Camera>();
+            self.InitCamera(camera2, 2);
 
-            for(int i = 0; i < fcameras.Length; i++)
+            cameraHolder3 = new GameObject();
+            cameraHolder3.transform.parent = self.gameObject.transform;
+            camera3 = cameraHolder3.AddComponent<Camera>();
+            self.InitCamera(camera3, 3);
+
+            cameraHolder4 = new GameObject();
+            cameraHolder4.transform.parent = self.gameObject.transform;
+            camera4 = cameraHolder4.AddComponent<Camera>();
+            self.InitCamera(camera4, 4);
+
+            fcameras = new Camera[] { self.camera, camera2, camera3, camera4 };
+
+            for (int i = 0; i < fcameras.Length; i++)
             {
                 var listener = fcameras[i].gameObject.AddComponent<CameraListener>();
                 cameraListeners[i] = listener;
                 listener.AttachTo(fcameras[i], Display.main);
             }
 
-            self.camera2.enabled = false;
+            camera2.enabled = false;
+            camera3.enabled = false;
+            camera4.enabled = false;
             self.UpdateCameraPosition();
             Logger.LogInfo("Futile_Init camera2 success");
         }
@@ -308,12 +334,16 @@ namespace SplitScreenCoop
                     {
                         Logger.LogInfo("RainWorldGame_ctor1 creating roomcamera2");
                         var cams = self.cameras;
-                        Array.Resize(ref cams, 2);
+                        Array.Resize(ref cams, 4);
                         self.cameras = cams;
                         cams[1] = new RoomCamera(self, 1);
+                        cams[2] = new RoomCamera(self, 2);
+                        cams[3] = new RoomCamera(self, 3);
 
                         cams[0].followAbstractCreature = self.session.Players[0];
                         cams[1].followAbstractCreature = self.session.Players[1];
+                        cams[2].followAbstractCreature = self.session.Players[2];
+                        cams[3].followAbstractCreature = self.session.Players[3];
                     }
                     Logger.LogInfo("RainWorldGame_ctor1 hookpoint done");
                 });
@@ -343,8 +373,12 @@ namespace SplitScreenCoop
             {
                 Logger.LogInfo("camera2 detected");
                 self.cameras[1].MoveCamera(self.world.activeRooms[0], 0);
+                self.cameras[2].MoveCamera(self.world.activeRooms[0], 0);
+                self.cameras[3].MoveCamera(self.world.activeRooms[0], 0);
                 self.cameras[0].followAbstractCreature = self.session.Players[0];
                 self.cameras[1].followAbstractCreature = self.session.Players[1];
+                self.cameras[2].followAbstractCreature = self.session.Players[2];
+                self.cameras[3].followAbstractCreature = self.session.Players[3];
                 SetSplitMode(alwaysSplit ? preferedSplitMode : SplitMode.NoSplit, self);
             }
             else
@@ -444,6 +478,8 @@ namespace SplitScreenCoop
                 CurrentSplitMode = split;
                 OffsetHud(main);
                 OffsetHud(other);
+                OffsetHud(game.cameras[2]);
+                OffsetHud(game.cameras[3]);
 
                 if (dualDisplays)
                 {
@@ -472,15 +508,19 @@ namespace SplitScreenCoop
                             cameraListeners[1].direct = false;
                             cameraListeners[1].SetMap(new Rect(0f, 0.25f, 1f, 0.5f), new Rect(0f, 0f, 1f, 0.5f));
                             break;
-                        case SplitMode.SplitVertical:
+                        default:
                             Logger.LogInfo("SplitVertical");
                             cameraListeners[0].direct = false;
-                            cameraListeners[0].SetMap(new Rect(0.25f, 0f, 0.5f, 1f), new Rect(0f, 0f, 0.5f, 1f));
+                            cameraListeners[0].SetMap(new Rect(0.25f, 0.25f, 0.5f, 0.5f), new Rect(0f, 0.5f, 0.5f, 0.5f));
                             fcameras[1].enabled = true;
                             cameraListeners[1].direct = false;
-                            cameraListeners[1].SetMap(new Rect(0.25f, 0f, 0.5f, 1f), new Rect(0.5f, 0f, 0.5f, 1f));
-                            break;
-                        default:
+                            cameraListeners[1].SetMap(new Rect(0.25f, 0.25f, 0.5f, 0.5f), new Rect(0.5f, 0.5f, 0.5f, 0.5f));
+                            fcameras[2].enabled = true;
+                            cameraListeners[2].direct = false;
+                            cameraListeners[2].SetMap(new Rect(0.25f, 0.25f, 0.5f, 0.5f), new Rect(0f, 0f, 0.5f, 0.5f));
+                            fcameras[3].enabled = true;
+                            cameraListeners[3].direct = false;
+                            cameraListeners[3].SetMap(new Rect(0.25f, 0.25f, 0.5f, 0.5f), new Rect(0.5f, 0f, 0.5f, 0.5f));
                             break;
                     }
                 }
@@ -555,7 +595,7 @@ namespace SplitScreenCoop
             }
             else if(CurrentSplitMode == SplitMode.SplitVertical)
             {
-                offset += new Vector2(self.sSize.x / 4f, 0);
+                offset += new Vector2(self.sSize.x / 4f, self.sSize.y / 4f);
             }
             self.ReturnFContainer("HUD").SetPosition(offset);
             self.ReturnFContainer("HUD2").SetPosition(offset);
