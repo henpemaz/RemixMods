@@ -56,6 +56,7 @@ namespace SplitScreenCoop
             NoSplit,
             SplitHorizontal, // top bottom screens
             SplitVertical, // left right screens
+            Split4Screen // 4 players
         }
 
         public static SplitMode CurrentSplitMode;
@@ -96,6 +97,8 @@ namespace SplitScreenCoop
             if (Input.GetKeyDown("f9"))
             {
                 RainWorldGame game = (RainWorldGame)GameObject.FindObjectOfType<RainWorld>()?.processManager?.currentMainLoop;
+                CurrentSplitMode = preferedSplitMode = SplitMode.Split4Screen;
+                SetSplitMode(preferedSplitMode, game);
                 for (int i = 0; i < game.session.Players.Count; i++)
                     AssignCameraToPlayer(game.cameras[i], (Player)game.session.Players[i].realizedCreature);
             }
@@ -508,8 +511,16 @@ namespace SplitScreenCoop
                             cameraListeners[1].direct = false;
                             cameraListeners[1].SetMap(new Rect(0f, 0.25f, 1f, 0.5f), new Rect(0f, 0f, 1f, 0.5f));
                             break;
-                        default:
+                        case SplitMode.SplitVertical:
                             Logger.LogInfo("SplitVertical");
+                            cameraListeners[0].direct = false;
+                            cameraListeners[0].SetMap(new Rect(0.25f, 0f, 0.5f, 1f), new Rect(0f, 0f, 0.5f, 1f));
+                            fcameras[1].enabled = true;
+                            cameraListeners[1].direct = false;
+                            cameraListeners[1].SetMap(new Rect(0.25f, 0f, 0.5f, 1f), new Rect(0.5f, 0f, 0.5f, 1f));
+                            break;
+                        case SplitMode.Split4Screen:
+                            Logger.LogInfo("Split4Screen");
                             cameraListeners[0].direct = false;
                             cameraListeners[0].SetMap(new Rect(0.25f, 0.25f, 0.5f, 0.5f), new Rect(0f, 0.5f, 0.5f, 0.5f));
                             fcameras[1].enabled = true;
@@ -521,6 +532,8 @@ namespace SplitScreenCoop
                             fcameras[3].enabled = true;
                             cameraListeners[3].direct = false;
                             cameraListeners[3].SetMap(new Rect(0.25f, 0.25f, 0.5f, 0.5f), new Rect(0.5f, 0f, 0.5f, 0.5f));
+                            break;
+                        default:
                             break;
                     }
                 }
@@ -594,6 +607,10 @@ namespace SplitScreenCoop
                 offset += new Vector2(0, self.sSize.y / 4f);
             }
             else if(CurrentSplitMode == SplitMode.SplitVertical)
+            {
+                offset += new Vector2(self.sSize.x / 4f, 0f);
+            }
+            else if(CurrentSplitMode == SplitMode.Split4Screen)
             {
                 offset += new Vector2(self.sSize.x / 4f, self.sSize.y / 4f);
             }
