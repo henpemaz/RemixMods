@@ -339,14 +339,13 @@ namespace SplitScreenCoop
                         var cams = self.cameras;
                         Array.Resize(ref cams, 4);
                         self.cameras = cams;
-                        cams[1] = new RoomCamera(self, 1);
-                        cams[2] = new RoomCamera(self, 2);
-                        cams[3] = new RoomCamera(self, 3);
-
+                        for(int i = 1; i < 4; i++)
+                        {
+                            cams[i] = new RoomCamera(self, i);
+                            if(self.session.Players.Count > i)
+                                cams[i].followAbstractCreature = self.session.Players[i];
+                        }
                         cams[0].followAbstractCreature = self.session.Players[0];
-                        cams[1].followAbstractCreature = self.session.Players[1];
-                        cams[2].followAbstractCreature = self.session.Players[2];
-                        cams[3].followAbstractCreature = self.session.Players[3];
                     }
                     Logger.LogInfo("RainWorldGame_ctor1 hookpoint done");
                 });
@@ -375,13 +374,11 @@ namespace SplitScreenCoop
             if (self.cameras.Length > 1)
             {
                 Logger.LogInfo("camera2 detected");
-                self.cameras[1].MoveCamera(self.world.activeRooms[0], 0);
-                self.cameras[2].MoveCamera(self.world.activeRooms[0], 0);
-                self.cameras[3].MoveCamera(self.world.activeRooms[0], 0);
-                self.cameras[0].followAbstractCreature = self.session.Players[0];
-                self.cameras[1].followAbstractCreature = self.session.Players[1];
-                self.cameras[2].followAbstractCreature = self.session.Players[2];
-                self.cameras[3].followAbstractCreature = self.session.Players[3];
+                for(int i = 1; i < self.session.Players.Count; i++)
+                {
+                    self.cameras[i].MoveCamera(self.world.activeRooms[0], 0);
+                    self.cameras[i].followAbstractCreature = self.session.Players[i];
+                }
                 SetSplitMode(alwaysSplit ? preferedSplitMode : SplitMode.NoSplit, self);
             }
             else
@@ -476,13 +473,9 @@ namespace SplitScreenCoop
             if (game.cameras.Length > 1)
             {
                 Logger.LogInfo("multicam");
-                var main = game.cameras[0];
-                var other = game.cameras[1];
                 CurrentSplitMode = split;
-                OffsetHud(main);
-                OffsetHud(other);
-                OffsetHud(game.cameras[2]);
-                OffsetHud(game.cameras[3]);
+                for(int i = 0; i < game.cameras.Length; i++)
+                    OffsetHud(game.cameras[i]);
 
                 if (dualDisplays)
                 {
