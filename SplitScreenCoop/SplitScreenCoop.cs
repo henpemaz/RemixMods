@@ -36,6 +36,7 @@ namespace SplitScreenCoop
                 On.Futile.Init += Futile_Init; // turn on cam2
                 On.Futile.UpdateCameraPosition += Futile_UpdateCameraPosition; // handle custom switcheroos
                 On.FScreen.ReinitRenderTexture += FScreen_ReinitRenderTexture; // new tech huh
+                On.PersistentData.ctor += PersistentData_ctor; // memory for more cameras
             }
             catch (Exception e)
             {
@@ -242,7 +243,38 @@ namespace SplitScreenCoop
             cameraListeners[1].BindToDisplay(Display.displays[1]);
             cameraListeners[1].mirrorMain = true;
         }
-
+        
+        /// <summary>
+        /// Allocate memory for 4 cameras instead of default 2
+        /// </summary>
+        private void PersistentData_ctor(On.PersistentData.orig_ctor orig, PersistentData self, RainWorld rainWorld)
+        {
+            Logger.LogInfo("Allocation");
+            orig(self, rainWorld);
+            int ntex = Mathf.Max(4, self.cameraTextures.GetLength(0));
+            self.cameraTextures = new Texture2D[ntex, 2];
+            for (int i = 0; i < ntex; i++)
+            {
+                for (int j = 0; j < 2; j++)
+                {
+                    self.cameraTextures[i, j] = new Texture2D(1400, 800, TextureFormat.ARGB32, false);
+                    self.cameraTextures[i, j].anisoLevel = 0;
+                    self.cameraTextures[i, j].filterMode = FilterMode.Point;
+                    self.cameraTextures[i, j].wrapMode = TextureWrapMode.Clamp;
+                    if (j == 0)
+                    {
+                        Futile.atlasManager.UnloadAtlas("LevelTexture" + ((i != 0) ? i.ToString() : string.Empty));
+                        Futile.atlasManager.LoadAtlasFromTexture("LevelTexture" + ((i != 0) ? i.ToString() : string.Empty), self.cameraTextures[i, j], false);
+                    }
+                    else
+                    {
+                        Futile.atlasManager.UnloadAtlas("BackgroundTexture" + ((i != 0) ? i.ToString() : string.Empty));
+                        Futile.atlasManager.LoadAtlasFromTexture("BackgroundTexture" + ((i != 0) ? i.ToString() : string.Empty), self.cameraTextures[i, j], false);
+                    }
+                }
+            }
+        }
+        
         /// <summary>
         /// Init unity camera 2
         /// </summary>
