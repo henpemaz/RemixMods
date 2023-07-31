@@ -639,9 +639,7 @@ namespace SplitScreenCoop
             {
                 offset += new Vector2(self.sSize.x / 4f, self.sSize.y / 4f);
             }
-            self.ReturnFContainer("HUD").SetPosition(offset);
             self.ReturnFContainer("HUD2").SetPosition(offset);
-            self.hud?.map?.inFrontContainer?.SetPosition(offset);
         }
     }
 }
