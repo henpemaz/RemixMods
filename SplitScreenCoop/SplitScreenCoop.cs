@@ -619,6 +619,8 @@ namespace SplitScreenCoop
         public void OffsetHud(RoomCamera self)
         {
             Vector2 offset = camOffsets[self.cameraNumber];
+            self.hud?.map?.inFrontContainer?.SetPosition(offset); // map icons
+
             if (CurrentSplitMode == SplitMode.SplitHorizontal)
             {
                 offset += new Vector2(0, self.sSize.y / 4f);
@@ -631,7 +633,7 @@ namespace SplitScreenCoop
             {
                 offset += new Vector2(self.sSize.x / 4f, self.sSize.y / 4f);
             }
-            self.ReturnFContainer("HUD2").SetPosition(offset);
+            self.ReturnFContainer("HUD2").SetPosition(offset); // rain/karma/food
         }
     }
 }
