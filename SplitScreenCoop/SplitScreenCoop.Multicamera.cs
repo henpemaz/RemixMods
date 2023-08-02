@@ -77,6 +77,29 @@ namespace SplitScreenCoop
                         inpause = false;
                     }
                 }
+                else if (CurrentSplitMode == SplitMode.Split4Screen)
+                {
+                    float xOffset = manager.rainWorld.screenSize.x / 4f;
+                    float yOffset = manager.rainWorld.screenSize.y / 4f;
+                    self.container.SetPosition(xOffset, -yOffset);
+                    inpause = true;
+                    try
+                    {
+                        var pause2 = new Menu.PauseMenu(manager, game);
+                        var pause3 = new Menu.PauseMenu(manager, game);
+                        var pause4 = new Menu.PauseMenu(manager, game);
+                        pause2.container.SetPosition(camOffsets[game.cameras[1].cameraNumber] + new Vector2(-xOffset, -yOffset));
+                        pause3.container.SetPosition(camOffsets[game.cameras[2].cameraNumber] + new Vector2(xOffset, yOffset));
+                        pause4.container.SetPosition(camOffsets[game.cameras[3].cameraNumber] + new Vector2(-xOffset, yOffset));
+                        manager.sideProcesses.Add(pause2);
+                        manager.sideProcesses.Add(pause3);
+                        manager.sideProcesses.Add(pause4);
+                    }
+                    finally
+                    {
+                        inpause = false;
+                    }
+                }
             }
         }
 
