@@ -95,14 +95,6 @@ namespace SplitScreenCoop
                 if (CurrentSplitMode != SplitMode.NoSplit && GameObject.FindObjectOfType<RainWorld>()?.processManager?.currentMainLoop is RainWorldGame game)
                     SetSplitMode(preferedSplitMode, game);
             }
-            if (Input.GetKeyDown("f9"))
-            {
-                RainWorldGame game = (RainWorldGame)GameObject.FindObjectOfType<RainWorld>()?.processManager?.currentMainLoop;
-                CurrentSplitMode = preferedSplitMode = SplitMode.Split4Screen;
-                SetSplitMode(preferedSplitMode, game);
-                for (int i = 0; i < game.session.Players.Count; i++)
-                    AssignCameraToPlayer(game.cameras[i], (Player)game.session.Players[i].realizedCreature);
-            }
         }
 
         public void OnModsInit(On.RainWorld.orig_OnModsInit orig, RainWorld self)

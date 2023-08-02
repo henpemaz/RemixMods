@@ -97,6 +97,7 @@ namespace SplitScreenCoop
         {
             orig(self, player);
             OffsetHud(self);
+            AssignCameraToPlayer(self, (Player)self.game.session.Players[self.cameraNumber].realizedCreature);
         }
 
         public delegate bool delget_ShouldBeCulled(GraphicsModule gm);
