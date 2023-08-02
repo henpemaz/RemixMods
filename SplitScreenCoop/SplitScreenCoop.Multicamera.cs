@@ -131,9 +131,14 @@ namespace SplitScreenCoop
         {
             if (gm.owner.room.game.cameras.Length > 1)
             {
-                return orig(gm) &&
-                !gm.owner.room.game.cameras[1].PositionCurrentlyVisible(gm.owner.firstChunk.pos, gm.cullRange + ((!gm.culled) ? 100f : 0f), true) &&
-                !gm.owner.room.game.cameras[1].PositionVisibleInNextScreen(gm.owner.firstChunk.pos, (!gm.culled) ? 100f : 50f, true);
+                bool result = orig(gm);
+                for (int i = 1; i < gm.owner.room.game.session.Players.Count; i++)
+                {
+                    result = result &&
+                    !gm.owner.room.game.cameras[i].PositionCurrentlyVisible(gm.owner.firstChunk.pos, gm.cullRange + ((!gm.culled) ? 100f : 0f), true) &&
+                    !gm.owner.room.game.cameras[i].PositionVisibleInNextScreen(gm.owner.firstChunk.pos, (!gm.culled) ? 100f : 50f, true);
+                }
+                return result;
             }
             return orig(gm);
         }
