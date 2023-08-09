@@ -234,7 +234,6 @@ namespace SplitScreenCoop
             }
         }
 
-
         public void ReadSettings()
         {
             preferedSplitMode = Options.PreferredSplitMode.Value;
@@ -751,6 +750,33 @@ namespace SplitScreenCoop
                 c.EmitDelegate<Func<int, JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom, int>>((returnValue, self) =>
                 {
                     return returnValue + (int)GetRelativeSplitScreenOffset(self.jollyHud.Camera).y;
+                });
+
+                // Allow icons to appear when other slugcats are in the same room, but not on screen
+                c.GotoNext(MoveType.After,
+                    i => i.MatchCallvirt<JollyCoop.JollyHUD.JollyPlayerSpecificHud>("get_PlayerRoomBeingViewed")
+                    );
+                c.Emit(Mono.Cecil.Cil.OpCodes.Ldarg_0);
+                c.EmitDelegate<Func<bool, JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom, bool>>((returnValue, self) =>
+                {
+                    // if result == true - hide slugcat icon
+                    var followedCreature = self.jollyHud.Camera.followAbstractCreature;
+                    if (followedCreature == self.jollyHud.RealizedPlayer.abstractCreature)
+                        return returnValue;
+                    if (returnValue)
+                    {
+                        var followedPos = followedCreature.world.RoomToWorldPos(followedCreature.realizedCreature.mainBodyChunk.pos, followedCreature.Room.index);
+                        var distanceX = Math.Abs(self.playerPos.x - followedPos.x);
+                        var distanceY = Math.Abs(self.playerPos.y - followedPos.y);
+
+                        var magicNumber = 2.6f; // otherwise slugcat icons are sometimes placed weirdly
+                        if (distanceX > (self.jollyHud.Camera.sSize.x - magicNumber * GetRelativeSplitScreenOffset(self.jollyHud.Camera).x) ||
+                            distanceY > (self.jollyHud.Camera.sSize.y - magicNumber * GetRelativeSplitScreenOffset(self.jollyHud.Camera).y))
+                        {
+                            returnValue = false;
+                        }
+                    }
+                    return returnValue;
                 });
             }
             catch (Exception e)
