@@ -11,6 +11,7 @@ using Mono.Cecil.Cil;
 using BepInEx.Logging;
 using MonoMod.RuntimeDetour.HookGen;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 [module: UnverifiableCode]
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -160,6 +161,13 @@ namespace SplitScreenCoop
                 On.RoomCamera.ChangeCameraToPlayer += RoomCamera_ChangeCameraToPlayer;
                 IL.Player.TriggerCameraSwitch += Player_TriggerCameraSwitch;
                 On.Player.ctor += Player_ctor;
+                IL.HUD.HUD.InitSinglePlayerHud += InitSinglePlayerHud;
+                HookEndpointManager.Modify(typeof(JollyCoop.JollyHUD.JollyPlayerSpecificHud).GetProperty("Camera").GetGetMethod(),
+                    new ILContext.Manipulator(JollyPlayerSpecificHud_get_Camera));
+                On.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyPlayerArrow.Draw += JollyPlayerArrow_Draw;
+                On.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyDeathBump.Draw += JollyDeathBump_Draw;
+                On.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom.Update += JollyOffRoom_Update;
+                IL.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom.Update += JollyOffRoom_Update1;
 
                 // Shader shenanigans
                 // wrapped calls to store shader globals
@@ -203,6 +211,29 @@ namespace SplitScreenCoop
                 }
             }
         }
+
+        public void JollyPlayerSpecificHud_get_Camera(ILContext il)
+        {
+            try
+            {
+                var c = new ILCursor(il);
+                c.GotoNext(MoveType.Before,
+                    i => i.MatchRet()
+                    );
+
+                c.Emit(Mono.Cecil.Cil.OpCodes.Ldarg_0);
+                c.EmitDelegate<Func<RoomCamera, JollyCoop.JollyHUD.JollyPlayerSpecificHud, RoomCamera>>((returnValue, self) =>
+                {
+                    return self.GetSplitScreenCamera();
+                });
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e);
+                throw;
+            }
+        }
+
 
         public void ReadSettings()
         {
@@ -618,22 +649,158 @@ namespace SplitScreenCoop
         /// </summary>
         public void OffsetHud(RoomCamera self)
         {
-            Vector2 offset = camOffsets[self.cameraNumber];
-            self.hud?.map?.inFrontContainer?.SetPosition(offset); // map icons
+            self.hud?.map?.inFrontContainer?.SetPosition(camOffsets[self.cameraNumber]); // map icons 
+            self.ReturnFContainer("HUD2").SetPosition(GetSplitScreenHudOffset(self, self.cameraNumber)); // rain/karma/food
+        }
 
+        /// <summary>
+        /// Store screen bound camera to an extended field when constructor is called
+        /// </summary>
+        public void InitSinglePlayerHud(ILContext il)
+        {
+            try
+            {
+                var c = new ILCursor(il);
+                c.GotoNext(MoveType.After,
+                    i => i.MatchNewobj<JollyCoop.JollyHUD.JollyPlayerSpecificHud>(),
+                    i => i.MatchStloc(2)
+                    );
+
+                c.Emit(Mono.Cecil.Cil.OpCodes.Ldarg_1);
+                c.Emit(Mono.Cecil.Cil.OpCodes.Ldloc_2);
+                c.EmitDelegate<Action<RoomCamera, JollyCoop.JollyHUD.JollyPlayerSpecificHud>>((cam, self) =>
+                {
+                    self.SetSplitScreenCamera(cam);
+                    return;
+                });
+                
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e);
+                throw;
+            }
+        }
+
+        public void JollyPlayerArrow_Draw(On.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyPlayerArrow.orig_Draw orig, JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyPlayerArrow self, float timeStacker)
+        {
+            orig(self, timeStacker);
+            var offset = GetSplitScreenHudOffset(self.jollyHud.Camera, 0);
+            self.mainSprite.x -= offset.x;
+            self.mainSprite.y -= offset.y;
+            self.gradient.x -= offset.x;
+            self.gradient.y -= offset.y;
+            self.label.x -= offset.x;
+            self.label.y -= offset.y;
+        }
+
+        public void JollyDeathBump_Draw(On.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyDeathBump.orig_Draw orig, JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyDeathBump self, float timeStacker)
+        {
+            orig(self, timeStacker);
+            var offset = GetSplitScreenHudOffset(self.jollyHud.Camera, 0);
+            self.symbolSprite.x -= offset.x;
+            self.symbolSprite.y -= offset.y;
+        }
+
+        public void JollyOffRoom_Update(On.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom.orig_Update orig, JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom self)
+        {
+            orig(self);
+            var offset = GetRelativeSplitScreenOffset(self.jollyHud.Camera);
+            self.drawPos -= offset;
+        }
+
+        public void JollyOffRoom_Update1(ILContext il)
+        {
+            try
+            {
+                var c = new ILCursor(il);
+                c.GotoNext(MoveType.After,
+                    i => i.MatchLdfld<JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyPointer>("screenEdge")
+                    );
+                c.Emit(Mono.Cecil.Cil.OpCodes.Ldarg_0);
+                c.EmitDelegate<Func<int, JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom, int>>((returnValue, self) =>
+                {
+                    return returnValue + (int)GetRelativeSplitScreenOffset(self.jollyHud.Camera).x;
+                });
+                c.Index++;
+
+                c.GotoNext(MoveType.After,
+                    i => i.MatchLdfld<JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyPointer>("screenEdge")
+                    );
+                c.Emit(Mono.Cecil.Cil.OpCodes.Ldarg_0);
+                c.EmitDelegate<Func<int, JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom, int>>((returnValue, self) =>
+                {
+                    return returnValue + (int)GetRelativeSplitScreenOffset(self.jollyHud.Camera).x;
+                });
+                c.Index++;
+
+                c.GotoNext(MoveType.After,
+                    i => i.MatchLdfld<JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyPointer>("screenEdge")
+                    );
+                c.Emit(Mono.Cecil.Cil.OpCodes.Ldarg_0);
+                c.EmitDelegate<Func<int, JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom, int>>((returnValue, self) =>
+                {
+                    return returnValue + (int)GetRelativeSplitScreenOffset(self.jollyHud.Camera).y;
+                });
+                c.Index++;
+
+                c.GotoNext(MoveType.After,
+                    i => i.MatchLdfld<JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyPointer>("screenEdge")
+                    );
+                c.Emit(Mono.Cecil.Cil.OpCodes.Ldarg_0);
+                c.EmitDelegate<Func<int, JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom, int>>((returnValue, self) =>
+                {
+                    return returnValue + (int)GetRelativeSplitScreenOffset(self.jollyHud.Camera).y;
+                });
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e);
+                throw;
+            }
+        }
+
+        public Vector2 GetSplitScreenHudOffset(RoomCamera camera, int cameraNumber)
+        {
+            Vector2 offset = camOffsets[cameraNumber];
+            offset += GetRelativeSplitScreenOffset(camera);
+            return offset;
+        }
+
+        public Vector2 GetRelativeSplitScreenOffset(RoomCamera camera)
+        {
+            Vector2 offset = new Vector2();
             if (CurrentSplitMode == SplitMode.SplitHorizontal)
             {
-                offset += new Vector2(0, self.sSize.y / 4f);
+                offset = new Vector2(0, camera.sSize.y / 4f);
             }
-            else if(CurrentSplitMode == SplitMode.SplitVertical)
+            else if (CurrentSplitMode == SplitMode.SplitVertical)
             {
-                offset += new Vector2(self.sSize.x / 4f, 0f);
+                offset = new Vector2(camera.sSize.x / 4f, 0f);
             }
-            else if(CurrentSplitMode == SplitMode.Split4Screen)
+            else if (CurrentSplitMode == SplitMode.Split4Screen)
             {
-                offset += new Vector2(self.sSize.x / 4f, self.sSize.y / 4f);
+                offset = new Vector2(camera.sSize.x / 4f, camera.sSize.y / 4f);
             }
-            self.ReturnFContainer("HUD2").SetPosition(offset); // rain/karma/food
+            return offset;
+        }
+    }
+
+    public static class JollyHUDExtension
+    {
+        public class SplitScreenCamera
+        {
+            public RoomCamera cam;
+        }
+
+        private static readonly ConditionalWeakTable<JollyCoop.JollyHUD.JollyPlayerSpecificHud, SplitScreenCamera> _cwt = new();
+        public static RoomCamera GetSplitScreenCamera(this JollyCoop.JollyHUD.JollyPlayerSpecificHud hud)
+        {
+            return _cwt.GetValue(hud, _cwt => new()).cam;
+        }
+        public static RoomCamera SetSplitScreenCamera(this JollyCoop.JollyHUD.JollyPlayerSpecificHud hud, RoomCamera cam)
+        {
+            return _cwt.GetValue(hud, _cwt => new()).cam = cam;
         }
     }
 }
