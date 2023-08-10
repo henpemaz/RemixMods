@@ -168,6 +168,7 @@ namespace SplitScreenCoop
                 On.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyDeathBump.Draw += JollyDeathBump_Draw;
                 On.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom.Update += JollyOffRoom_Update;
                 IL.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom.Update += JollyOffRoom_Update1;
+                IL.HUD.Map.Draw += HudMap_Draw;
 
                 // Shader shenanigans
                 // wrapped calls to store shader globals
@@ -778,6 +779,117 @@ namespace SplitScreenCoop
                     }
                     return returnValue;
                 });
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Show other slugcat icons on the map even when they are in different rooms
+        /// </summary>
+        public void HudMap_Draw(ILContext il)
+        {
+            try
+            {
+                var c = new ILCursor(il);
+
+                // Make a list of creatures to show icons for (including other slugcat rooms)
+                List<AbstractCreature> creatures = new List<AbstractCreature>();
+                c.GotoNext(MoveType.After,
+                  i => i.MatchLdarg(0),
+                  i => i.MatchLdfld<HUD.HudPart>("hud"),
+                  i => i.MatchLdfld<HUD.HUD>("owner")
+                  );
+                c.Emit(Mono.Cecil.Cil.OpCodes.Ldarg_0);
+                c.EmitDelegate<Action<HUD.Map>>((self) =>
+                {
+                    List<AbstractCreature> tempCreatures = new List<AbstractCreature>();
+                    for (int m = 0; m < ((RainWorldGame)self.hud.rainWorld.processManager.currentMainLoop).session.Players.Count; m++)
+                    {
+                        if (((RainWorldGame)self.hud.rainWorld.processManager.currentMainLoop).session.Players[m].realizedCreature.room == null)
+                            continue;
+                        List<AbstractCreature> roomCreatures = ((RainWorldGame)self.hud.rainWorld.processManager.currentMainLoop).session.Players[m].realizedCreature.room.abstractRoom.creatures;
+                        for (int n = 0; n < roomCreatures.Count; n++)
+                        {
+                            tempCreatures.Add(roomCreatures[n]);
+                        }
+                    }
+                    creatures = tempCreatures.Distinct().ToList(); // remove duplicates
+                });
+
+                // saving the value of loop iterator
+                c.GotoNext(MoveType.After,
+                    i => i.MatchCallOrCallvirt<Room>("get_abstractRoom"),
+                    i => i.MatchLdfld<AbstractRoom>("creatures")
+                    );
+
+                c.Index++;
+                int counter = 0;
+                c.EmitDelegate<Func<int, int>>((stackVal) =>
+                {
+                    counter = stackVal;
+                    return 0; // replacing with 0 so original calls don't go oob
+                });
+
+                // accessing our assembled creature list
+                c.Index++;
+                c.EmitDelegate<Func<AbstractCreature, AbstractCreature>>((stackVal) =>
+                {
+                    return creatures[counter];
+                });
+
+                // disable vanishing of slugcat icons because of distance
+                c.GotoNext(MoveType.Before,
+                   i => i.MatchCallOrCallvirt<AbstractWorldEntity>("get_Room"),
+                   i => i.MatchLdfld<AbstractRoom>("index"),
+                   i => i.MatchLdarg(1)
+                   );
+
+                AbstractCreature cr = null;
+                c.EmitDelegate<Func<AbstractWorldEntity, AbstractWorldEntity>>((stackVal) =>
+                {
+                    cr = (AbstractCreature)stackVal;
+                    return stackVal;
+                });
+
+                c.GotoNext(MoveType.After,
+                   i => i.MatchCallOrCallvirt<UnityEngine.Mathf>("InverseLerp")
+                   );
+
+                c.EmitDelegate<Func<float, float>>((stackVal) =>
+                {
+                    if (cr.creatureTemplate.type == CreatureTemplate.Type.Slugcat)
+                        return 1f;
+                    return stackVal;
+                });
+
+                // changing loop bounds
+                c.GotoNext(MoveType.After,
+                    i => i.MatchCallOrCallvirt<Room>("get_abstractRoom"),
+                    i => i.MatchLdfld<AbstractRoom>("creatures")
+                    );
+
+                c.Index += 1;
+                c.EmitDelegate<Func<int, int>>((stackVal) =>
+                {
+                    return creatures.Count;
+                });
+
+                // clearing creature list
+                c.GotoNext(MoveType.After,
+                    i => i.MatchLdarg(0),
+                    i => i.MatchLdfld<HUD.Map>("visible"),
+                    i => i.MatchBrtrue(out _)
+                    );
+
+                c.Emit(Mono.Cecil.Cil.OpCodes.Ldarg_0);
+                c.EmitDelegate<Action<HUD.Map>>((self) =>
+               {
+                   creatures.Clear();
+               });
             }
             catch (Exception e)
             {
