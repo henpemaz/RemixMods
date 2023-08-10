@@ -1,0 +1,9 @@
+﻿
+support flatmode
+
+move song trigger to after karma ladder has done its thing
+	make it louder as well? normalized and still low
+
+	maybe instead of delaying make the other stuff quieter for a bit
+
+inv and lev I guess

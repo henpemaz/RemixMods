@@ -1,0 +1,43 @@
+offset 
+277 on X
+156 on Y but from the top
+
+def offset(x, y):
+	return (x - 277,1080 - y - 156)
+
+
+red basec
+top 1040 820
+bot 956 799
+
+whitebase pink
+top 992 782
+bot 1041 758
+
+white_baseaxoB
+top 1093 722
+bot 1023 757
+
+white_baseb blue
+top 1167 653
+bot 995 773
+
+white_baseBlack
+top 1146 753
+bot 986 766
+
+white_baseg
+top 945 828
+bot 976 751
+
+white_baseorng
+top notop
+bot 1006 805
+
+white_basered
+top 1161 799
+bot 764 811
+
+white_basew
+top notop
+bot 882 783

@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fartificer", "Fartificer\Fa
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpawnMenu", "SpawnMenu\SpawnMenu.csproj", "{784EFE37-AD0A-4AE0-8B69-37EAAE329F14}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SweetDreams", "SweetDreams\SweetDreams.csproj", "{E545D001-988F-420A-935C-FF08790922FD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,6 +47,10 @@ Global
 		{784EFE37-AD0A-4AE0-8B69-37EAAE329F14}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{784EFE37-AD0A-4AE0-8B69-37EAAE329F14}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{784EFE37-AD0A-4AE0-8B69-37EAAE329F14}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E545D001-988F-420A-935C-FF08790922FD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E545D001-988F-420A-935C-FF08790922FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E545D001-988F-420A-935C-FF08790922FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E545D001-988F-420A-935C-FF08790922FD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
