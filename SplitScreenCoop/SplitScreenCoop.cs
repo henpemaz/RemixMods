@@ -807,6 +807,10 @@ namespace SplitScreenCoop
                 c.EmitDelegate<Action<HUD.Map>>((self) =>
                 {
                     List<AbstractCreature> tempCreatures = new List<AbstractCreature>();
+                    if(!(self.hud.rainWorld.processManager.currentMainLoop is RainWorldGame))
+                    {
+                        return;
+                    }
                     for (int m = 0; m < ((RainWorldGame)self.hud.rainWorld.processManager.currentMainLoop).session.Players.Count; m++)
                     {
                         if (((RainWorldGame)self.hud.rainWorld.processManager.currentMainLoop).session.Players[m].realizedCreature.room == null)
