@@ -164,13 +164,13 @@ namespace SplitScreenCoop
         private void RoomCamera_ChangeCameraToPlayer(On.RoomCamera.orig_ChangeCameraToPlayer orig, RoomCamera self, AbstractCreature cameraTarget)
         {
             Logger.LogInfo("RoomCamera_ChangeCameraToPlayer");
-            if (CurrentSplitMode == SplitMode.Split4Screen) // prevent camera switching
+            if(self.game.cameras.Length >= self.game.Players.Count || CurrentSplitMode == SplitMode.Split4Screen) // prevent camera switching
+            {
                 return;
+            }
             if (cameraTarget.realizedCreature is Player player)
             {
                 AssignCameraToPlayer(self, player);
-                // ChangeCameraToPlayer gets called before the camera gets a chance to initialize
-                if (self.hud == null) { self.FireUpSinglePlayerHUD(player); }
             }
             orig(self, cameraTarget);
         }

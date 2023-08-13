@@ -120,7 +120,7 @@ namespace SplitScreenCoop
         {
             orig(self, player);
             OffsetHud(self);
-            AssignCameraToPlayer(self, (Player)self.game.session.Players[self.cameraNumber].realizedCreature);
+            AssignCameraToPlayer(self, player);
         }
 
         public delegate bool delget_ShouldBeCulled(GraphicsModule gm);
@@ -197,7 +197,7 @@ namespace SplitScreenCoop
                 // b param here is A
                 c.EmitDelegate<Func<bool, ShortcutHandler, int, bool>>((b, sc, k) =>
                 {
-                    return b || (sc.game.cameras.Length > 1 && sc.betweenRoomsWaitingLobby[k].creature.abstractCreature.FollowedByCamera(1));
+                    return b || sc.game.cameras.Any(c=> sc.betweenRoomsWaitingLobby[k].creature.abstractCreature.FollowedByCamera(c.cameraNumber));
                 });
             }
             else Logger.LogError(new Exception("Couldn't IL-hook ShortcutHandler_Update part 1 FollowedByCamera from SplitScreenMod")); // deffendisve progrmanig
@@ -232,8 +232,13 @@ namespace SplitScreenCoop
                 c.Emit(OpCodes.Ldloc, indexLoc);
                 c.EmitDelegate<Action<ShortcutHandler, int>>((sc, k) =>
                 {
-                    if (sc.game.cameras.Length > 1 && sc.betweenRoomsWaitingLobby[k].creature.abstractCreature.FollowedByCamera(1))
-                        sc.game.cameras[1].MoveCamera(sc.betweenRoomsWaitingLobby[k].room.realizedRoom, sc.betweenRoomsWaitingLobby[k].room.nodes[sc.betweenRoomsWaitingLobby[k].entranceNode].viewedByCamera);
+                    for (int i = 1; i < sc.game.cameras.Length; i++)
+                    {
+                        if (sc.betweenRoomsWaitingLobby[k].creature.abstractCreature.FollowedByCamera(i))
+                        {
+                            sc.game.cameras[i].MoveCamera(sc.betweenRoomsWaitingLobby[k].room.realizedRoom, sc.betweenRoomsWaitingLobby[k].room.nodes[sc.betweenRoomsWaitingLobby[k].entranceNode].viewedByCamera);
+                        }
+                    }
                 });
             }
             else Logger.LogError(new Exception("Couldn't IL-hook ShortcutHandler_Update part 3 MoveCamera from SplitScreenMod")); // deffendisve progrmanig
@@ -444,23 +449,24 @@ namespace SplitScreenCoop
 
             // I give up, let jolly be broken
             //// Jolly do NOT touch the camera I hecking swear you don't know what you're doing
-            //try
-            //{
-            //    //var c = new ILCursor(il);
-            //    c.Index = 0;
-            //    ILLabel doNOT = null;
-            //    c.GotoNext(MoveType.After, // this.game.AlivePlayers.Count > 0 && this.game.FirstAlivePlayer != null
-            //        i => i.MatchCallOrCallvirt<RainWorldGame>("get_FirstAlivePlayer"),
-            //        i => i.MatchBrfalse(out doNOT)
-            //        );
+            try
+            {
+                c.Index = 0;
+                ILLabel donot = null;
+                c.GotoNext(MoveType.After, // this.game.aliveplayers.count > 0 && this.game.firstaliveplayer != null
+                    i => i.MatchCallOrCallvirt<RainWorldGame>("get_FirstAlivePlayer"),
+                    i => i.MatchStloc(out _),
+                    i => i.MatchLdloc(out _),
+                    i => i.MatchBrfalse(out donot)
+                    );
 
-            //    c.Emit(OpCodes.Br, doNOT); // just don't
-            //}
-            //catch (Exception e)
-            //{
-            //    Logger.LogError(e);
-            //    throw;
-            //}
+                c.Emit(OpCodes.Br, donot); // just don't
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e);
+                throw;
+            }
         }
 
         /// <summary>

@@ -19,7 +19,7 @@ using System.Runtime.CompilerServices;
 
 namespace SplitScreenCoop
 {
-    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.8")]
+    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.10")]
     public partial class SplitScreenCoop : BaseUnityPlugin
     {
         public static SplitScreenCoopOptions Options;
@@ -392,9 +392,10 @@ namespace SplitScreenCoop
                     {
                         Logger.LogInfo("RainWorldGame_ctor1 creating roomcamera2");
                         var cams = self.cameras;
-                        Array.Resize(ref cams, 4);
+                        int ncams = preferedSplitMode == SplitMode.Split4Screen ? 4 : 2;
+                        Array.Resize(ref cams, ncams);
                         self.cameras = cams;
-                        for(int i = 1; i < 4; i++)
+                        for(int i = 1; i < ncams; i++)
                         {
                             cams[i] = new RoomCamera(self, i);
                             if(self.session.Players.Count > i)
@@ -429,9 +430,9 @@ namespace SplitScreenCoop
             if (self.cameras.Length > 1)
             {
                 Logger.LogInfo("camera2 detected");
-                for(int i = 1; i < self.session.Players.Count; i++)
+                for (int i = 0; i < self.session.Players.Count && i < self.cameras.Length; i++)
                 {
-                    self.cameras[i].MoveCamera(self.world.activeRooms[0], 0);
+                    Logger.LogInfo($"RainWorldGame_ctor cam {self.cameras[i].cameraNumber} to p {(self.session.Players[i].state as PlayerState).playerNumber}");
                     self.cameras[i].followAbstractCreature = self.session.Players[i];
                 }
                 SetSplitMode(alwaysSplit ? preferedSplitMode : SplitMode.NoSplit, self);
@@ -471,6 +472,33 @@ namespace SplitScreenCoop
             orig(self);
         }
 
+        struct RoomTarget : IEquatable<RoomTarget>
+        {
+            public int room;
+            public int camNumber;
+
+            public RoomTarget(int room, int camNumber)
+            {
+                this.room = room;
+                this.camNumber = camNumber;
+            }
+
+            public bool Equals(RoomTarget other)
+            {
+                return room == other.room && camNumber == other.camNumber;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is RoomTarget other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                return 1000 * room + camNumber;
+            }
+        }
+
         /// <summary>
         /// Check for needed split mode changes, update realizers
         /// </summary>
@@ -483,19 +511,17 @@ namespace SplitScreenCoop
 
             if (self.cameras.Length > 1)
             {
-                var main = self.cameras[0];
-                var other = self.cameras[1];
-                if (CurrentSplitMode == SplitMode.NoSplit && preferedSplitMode != SplitMode.NoSplit && main.followAbstractCreature != other.followAbstractCreature && (other.room != main.room || other.currentCameraPosition != main.currentCameraPosition))
+                bool splitTargets = self.cameras.Select(x => x.room != null ? new RoomTarget(x.room.abstractRoom.index, x.currentCameraPosition) : new RoomTarget()).Distinct().Count() != 1;
+                if (CurrentSplitMode == SplitMode.NoSplit && preferedSplitMode != SplitMode.NoSplit && splitTargets)
                 {
                     SetSplitMode(preferedSplitMode, self);
                 }
-
-                if (CurrentSplitMode != SplitMode.NoSplit && (other.room == main.room && other.currentCameraPosition == main.currentCameraPosition) && !alwaysSplit)
+                else if (CurrentSplitMode != SplitMode.NoSplit && !splitTargets && !alwaysSplit)
                 {
                     SetSplitMode(SplitMode.NoSplit, self);
                 }
 
-                if (CurrentSplitMode != SplitMode.NoSplit && main.room.abstractRoom.name == "SB_L01") // honestly jolly
+                if (CurrentSplitMode != SplitMode.NoSplit && self.cameras[0].room != null && self.cameras[0].room.abstractRoom.name == "SB_L01") // honestly jolly
                 {
                     ConsiderColapsing(self);
                 }
