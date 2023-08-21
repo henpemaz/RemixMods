@@ -792,7 +792,7 @@ namespace SplitScreenCoop
                         return returnValue;
                     if (returnValue)
                     {
-                        if (!followedCreature.realizedCreature)
+                        if (followedCreature.realizedCreature == null)
                         {
                             return true;
                         }
@@ -845,7 +845,7 @@ namespace SplitScreenCoop
                     {
                         Creature cr = ((RainWorldGame)self.hud.rainWorld.processManager.currentMainLoop).session.Players[m].realizedCreature;
 
-                        if (!cr || !cr.room)
+                        if (cr == null || cr.room == null)
                         {
                             continue;
                         }
