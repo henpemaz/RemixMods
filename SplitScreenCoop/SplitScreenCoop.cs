@@ -792,6 +792,10 @@ namespace SplitScreenCoop
                         return returnValue;
                     if (returnValue)
                     {
+                        if (!followedCreature.realizedCreature)
+                        {
+                            return true;
+                        }
                         var followedPos = followedCreature.world.RoomToWorldPos(followedCreature.realizedCreature.mainBodyChunk.pos, followedCreature.Room.index);
                         var distanceX = Math.Abs(self.playerPos.x - followedPos.x);
                         var distanceY = Math.Abs(self.playerPos.y - followedPos.y);
@@ -839,9 +843,14 @@ namespace SplitScreenCoop
                     }
                     for (int m = 0; m < ((RainWorldGame)self.hud.rainWorld.processManager.currentMainLoop).session.Players.Count; m++)
                     {
-                        if (((RainWorldGame)self.hud.rainWorld.processManager.currentMainLoop).session.Players[m].realizedCreature.room == null)
+                        Creature cr = ((RainWorldGame)self.hud.rainWorld.processManager.currentMainLoop).session.Players[m].realizedCreature;
+
+                        if (!cr || !cr.room)
+                        {
                             continue;
-                        List<AbstractCreature> roomCreatures = ((RainWorldGame)self.hud.rainWorld.processManager.currentMainLoop).session.Players[m].realizedCreature.room.abstractRoom.creatures;
+                        }
+
+                        List<AbstractCreature> roomCreatures = cr.room.abstractRoom.creatures;
                         for (int n = 0; n < roomCreatures.Count; n++)
                         {
                             tempCreatures.Add(roomCreatures[n]);
