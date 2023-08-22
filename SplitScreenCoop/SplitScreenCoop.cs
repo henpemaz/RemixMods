@@ -401,8 +401,10 @@ namespace SplitScreenCoop
                         for(int i = 1; i < ncams; i++)
                         {
                             cams[i] = new RoomCamera(self, i);
-                            if(self.session.Players.Count > i)
+                            if (i < self.session.Players.Count)
                                 cams[i].followAbstractCreature = self.session.Players[i];
+                            else
+                                cams[i].followAbstractCreature = self.session.Players[0];
                         }
                         cams[0].followAbstractCreature = self.session.Players[0];
                     }
@@ -433,10 +435,13 @@ namespace SplitScreenCoop
             if (self.cameras.Length > 1)
             {
                 Logger.LogInfo("camera2 detected");
-                for (int i = 0; i < self.session.Players.Count && i < self.cameras.Length; i++)
+                for (int i = 0; i < self.cameras.Length; i++)
                 {
-                    Logger.LogInfo($"RainWorldGame_ctor cam {self.cameras[i].cameraNumber} to p {(self.session.Players[i].state as PlayerState).playerNumber}");
-                    self.cameras[i].followAbstractCreature = self.session.Players[i];
+                    //Logger.LogInfo($"RainWorldGame_ctor cam {self.cameras[i].cameraNumber} to p {(self.session.Players[i].state as PlayerState).playerNumber}");
+                    if (i < self.session.Players.Count)
+                        self.cameras[i].followAbstractCreature = self.session.Players[i];
+                    else
+                        self.cameras[i].followAbstractCreature = self.session.Players[0];
                 }
                 SetSplitMode(alwaysSplit ? preferedSplitMode : SplitMode.NoSplit, self);
             }
