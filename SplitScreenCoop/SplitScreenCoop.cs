@@ -85,6 +85,9 @@ namespace SplitScreenCoop
         public bool init;
         public static ManualLogSource sLogger;
         public static bool selfSufficientCoop;
+        public static bool[] cameraZoomed = new bool[] { false, false, false, false };
+        public static Rect[] cameraSourcePositions = new Rect[] { new Rect(0.25f, 0.25f, 0.5f, 0.5f), new Rect(0.25f, 0.25f, 0.5f, 0.5f), new Rect(0.25f, 0.25f, 0.5f, 0.5f), new Rect(0.25f, 0.25f, 0.5f, 0.5f) };
+        public static Rect[] cameraTargetPositions = new Rect[] { new Rect(0f, 0.5f, 0.5f, 0.5f), new Rect(0.5f, 0.5f, 0.5f, 0.5f), new Rect(0f, 0f, 0.5f, 0.5f), new Rect(0.5f, 0f, 0.5f, 0.5f) };
 
         public void Update()
         {
@@ -595,17 +598,13 @@ namespace SplitScreenCoop
                             break;
                         case SplitMode.Split4Screen:
                             Logger.LogInfo("Split4Screen");
-                            cameraListeners[0].direct = false;
-                            cameraListeners[0].SetMap(new Rect(0.25f, 0.25f, 0.5f, 0.5f), new Rect(0f, 0.5f, 0.5f, 0.5f));
-                            fcameras[1].enabled = true;
-                            cameraListeners[1].direct = false;
-                            cameraListeners[1].SetMap(new Rect(0.25f, 0.25f, 0.5f, 0.5f), new Rect(0.5f, 0.5f, 0.5f, 0.5f));
-                            fcameras[2].enabled = true;
-                            cameraListeners[2].direct = false;
-                            cameraListeners[2].SetMap(new Rect(0.25f, 0.25f, 0.5f, 0.5f), new Rect(0f, 0f, 0.5f, 0.5f));
-                            fcameras[3].enabled = true;
-                            cameraListeners[3].direct = false;
-                            cameraListeners[3].SetMap(new Rect(0.25f, 0.25f, 0.5f, 0.5f), new Rect(0.5f, 0f, 0.5f, 0.5f));
+
+                            for (int i = 0; i < 4; i++)
+                            {
+                                fcameras[i].enabled = true;
+                                cameraListeners[i].direct = false;
+                                cameraListeners[i].SetMap(cameraSourcePositions[i], cameraTargetPositions[i]);
+                            }
                             break;
                         default:
                             break;
@@ -675,8 +674,16 @@ namespace SplitScreenCoop
         /// </summary>
         public void OffsetHud(RoomCamera self)
         {
-            self.hud?.map?.inFrontContainer?.SetPosition(camOffsets[self.cameraNumber]); // map icons 
-            self.ReturnFContainer("HUD2").SetPosition(GetSplitScreenHudOffset(self, self.cameraNumber)); // rain/karma/food
+            self.hud?.map?.inFrontContainer?.SetPosition(camOffsets[self.cameraNumber]); // map icons
+            // rain/karma/food
+            if (cameraZoomed[self.cameraNumber])
+            {
+                self.ReturnFContainer("HUD2").SetPosition(new Vector2(0, 0));
+            }
+            else
+            {
+                self.ReturnFContainer("HUD2").SetPosition(GetSplitScreenHudOffset(self, self.cameraNumber)); // rain/karma/food
+            }
         }
 
         /// <summary>
@@ -937,6 +944,21 @@ namespace SplitScreenCoop
             }
         }
 
+        public void ToggleCameraZoom(RoomCamera cam)
+        {
+            var camNum = cam.cameraNumber;
+            cameraZoomed[camNum] ^= true;
+            bool zoomed = cameraZoomed[camNum];
+            if (zoomed)
+            {
+                cameraListeners[camNum].SetMap(new Rect(0f, 0f, 1f, 1f), cameraTargetPositions[camNum]);
+            }
+            else
+            {
+                cameraListeners[camNum].SetMap(cameraSourcePositions[camNum], cameraTargetPositions[camNum]);
+            }
+            OffsetHud(cam);
+        }
         public Vector2 GetSplitScreenHudOffset(RoomCamera camera, int cameraNumber)
         {
             Vector2 offset = camOffsets[cameraNumber];

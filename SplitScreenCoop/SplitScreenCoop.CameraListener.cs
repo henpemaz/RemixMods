@@ -19,6 +19,7 @@ namespace SplitScreenCoop
             public Camera fcamera;
             public Display display;
             public RenderTexture renderTexture;
+            public RenderTexture tempTex;
             public Dictionary<string, Color> ShaderColors = new Dictionary<string, Color>();
             public Dictionary<string, Vector4> ShaderVectors = new Dictionary<string, Vector4>();
             public Dictionary<string, float> ShaderFloats = new Dictionary<string, float>();
@@ -31,7 +32,9 @@ namespace SplitScreenCoop
             public int srcHeight;
             public int dstX;
             public int dstY;
-            
+            public int dstWidth;
+            public int dstHeight;
+
 
             public bool _direct = true;
             /// <summary>
@@ -85,6 +88,7 @@ namespace SplitScreenCoop
                 }
                 display.Extras().ReinitRenderTexture();
                 renderTexture = new RenderTexture(Futile.screen.renderTexture);
+                tempTex = new RenderTexture(renderTexture);
                 SetMap(this.sourceRect, this.targetRect);
             }
             
@@ -101,6 +105,8 @@ namespace SplitScreenCoop
                 srcHeight = Mathf.FloorToInt(h * sourceRect.height);
                 dstX = Mathf.FloorToInt(w * targetRect.x);
                 dstY = Mathf.FloorToInt(h * targetRect.y);
+                dstWidth = Mathf.FloorToInt(w * targetRect.width);
+                dstHeight = Mathf.FloorToInt(h * targetRect.height);
                 this.sourceRect = sourceRect;
                 this.targetRect = targetRect;
             }
@@ -124,7 +130,16 @@ namespace SplitScreenCoop
             {
                 if (!_direct)
                 {
-                    Graphics.CopyTexture(renderTexture, 0, 0, srcX, srcY, srcWidth, srcHeight, Futile.screen.renderTexture, 0, 0, dstX, dstY);
+                    if (srcWidth != dstWidth)
+                    {
+                        var scale = sourceRect.width / targetRect.width;
+                        Graphics.Blit(renderTexture, tempTex, new Vector2(scale, scale), new Vector2(0, 0));
+                        Graphics.CopyTexture(tempTex, 0, 0, 0, 0, dstWidth, dstHeight, Futile.screen.renderTexture, 0, 0, dstX, dstY);
+                    }
+                    else
+                    {
+                        Graphics.CopyTexture(renderTexture, 0, 0, srcX, srcY, srcWidth, srcHeight, Futile.screen.renderTexture, 0, 0, dstX, dstY);
+                    }
                 }
             }
 
@@ -138,6 +153,9 @@ namespace SplitScreenCoop
                     renderTexture.Release();
                     renderTexture.DiscardContents();
                     renderTexture = null;
+                    tempTex.Release();
+                    tempTex.DiscardContents();
+                    tempTex = null;
                 }
             }
 

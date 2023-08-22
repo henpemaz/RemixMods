@@ -166,6 +166,7 @@ namespace SplitScreenCoop
             Logger.LogInfo("RoomCamera_ChangeCameraToPlayer");
             if(self.game.cameras.Length >= self.game.Players.Count || CurrentSplitMode == SplitMode.Split4Screen) // prevent camera switching
             {
+                ToggleCameraZoom(self);
                 return;
             }
             if (cameraTarget.realizedCreature is Player player)
