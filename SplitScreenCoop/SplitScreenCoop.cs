@@ -815,6 +815,10 @@ namespace SplitScreenCoop
                 c.Emit(Mono.Cecil.Cil.OpCodes.Ldarg_0);
                 c.EmitDelegate<Func<bool, JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom, bool>>((returnValue, self) =>
                 {
+                    if (self.jollyHud.Camera == null || self.jollyHud.RealizedPlayer == null || self.jollyHud.RealizedPlayer.abstractCreature == null)
+                    {
+                        return true;
+                    }
                     // if result == true - hide slugcat icon
                     var followedCreature = self.jollyHud.Camera.followAbstractCreature;
                     if (followedCreature == self.jollyHud.RealizedPlayer.abstractCreature)
