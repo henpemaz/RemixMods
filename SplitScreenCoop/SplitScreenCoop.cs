@@ -164,6 +164,7 @@ namespace SplitScreenCoop
                 On.RoomCamera.ChangeCameraToPlayer += RoomCamera_ChangeCameraToPlayer;
                 IL.Player.TriggerCameraSwitch += Player_TriggerCameraSwitch;
                 On.Player.TriggerCameraSwitch += Player_TriggerCameraSwitch1;
+                On.Player.JollyInputUpdate += Player_JollyInputUpdate;
 
                 On.Player.ctor += Player_ctor;
                 IL.HUD.HUD.InitSinglePlayerHud += InitSinglePlayerHud;

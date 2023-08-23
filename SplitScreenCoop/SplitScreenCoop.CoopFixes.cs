@@ -225,5 +225,11 @@ namespace SplitScreenCoop
             orig(self, storyGameCharacter);
         }
 
+        // Don't move a player when they have map opened
+        private void Player_JollyInputUpdate(On.Player.orig_JollyInputUpdate orig, Player self)
+        {
+            orig(self);
+            self.standStillOnMapButton = true;
+        }
     }
 }
