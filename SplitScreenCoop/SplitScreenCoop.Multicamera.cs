@@ -328,6 +328,8 @@ namespace SplitScreenCoop
                 c.Emit(OpCodes.Ldarg_0);
                 c.EmitDelegate<Action<RoomCamera>>((rc) =>
                 {
+                    if (cameraZoomed[rc.cameraNumber])
+                        return;
                     if (CurrentSplitMode == SplitMode.SplitHorizontal)
                     {
                         float pad = rc.sSize.y / 4f;
@@ -395,7 +397,7 @@ namespace SplitScreenCoop
                     c.Emit(OpCodes.Ldarg_0); // RoomCamera
                     c.EmitDelegate<Func<float, RoomCamera, float>>((v, rc) =>
                     {
-                        if (CurrentSplitMode == SplitMode.SplitVertical || CurrentSplitMode == SplitMode.Split4Screen)
+                        if (CurrentSplitMode == SplitMode.SplitVertical || CurrentSplitMode == SplitMode.Split4Screen && !cameraZoomed[rc.cameraNumber])
                         {
                             return v - rc.sSize.x / 4f;
                         }
@@ -407,7 +409,7 @@ namespace SplitScreenCoop
                     c.Emit(OpCodes.Ldarg_0); // RoomCamera
                     c.EmitDelegate<Func<float, RoomCamera, float>>((v, rc) =>
                     {
-                        if (CurrentSplitMode == SplitMode.SplitVertical || CurrentSplitMode == SplitMode.Split4Screen)
+                        if (CurrentSplitMode == SplitMode.SplitVertical || CurrentSplitMode == SplitMode.Split4Screen && !cameraZoomed[rc.cameraNumber])
                         {
                             return v + rc.sSize.x / 4f;
                         }
@@ -419,7 +421,7 @@ namespace SplitScreenCoop
                     c.Emit(OpCodes.Ldarg_0); // RoomCamera
                     c.EmitDelegate<Func<float, RoomCamera, float>>((v, rc) =>
                     {
-                        if (CurrentSplitMode == SplitMode.SplitHorizontal || CurrentSplitMode == SplitMode.Split4Screen)
+                        if (CurrentSplitMode == SplitMode.SplitHorizontal || CurrentSplitMode == SplitMode.Split4Screen && !cameraZoomed[rc.cameraNumber])
                         {
                             return v - rc.sSize.y / 4f;
                         }
@@ -432,7 +434,7 @@ namespace SplitScreenCoop
                     c.Emit(OpCodes.Ldarg_0); // RoomCamera
                     c.EmitDelegate<Func<float, RoomCamera, float>>((v, rc) =>
                     {
-                        if (CurrentSplitMode == SplitMode.SplitHorizontal || CurrentSplitMode == SplitMode.Split4Screen)
+                        if (CurrentSplitMode == SplitMode.SplitHorizontal || CurrentSplitMode == SplitMode.Split4Screen && !cameraZoomed[rc.cameraNumber])
                         {
                             return v + rc.sSize.y / 4f;
                         }
@@ -497,7 +499,7 @@ namespace SplitScreenCoop
                         c.Emit(OpCodes.Ldarg_0); // RoomCamera
                         c.EmitDelegate<Func<float, RoomCamera, float>>((v, rc) =>
                         {
-                            if (CurrentSplitMode == SplitMode.SplitVertical || CurrentSplitMode == SplitMode.Split4Screen)
+                            if (CurrentSplitMode == SplitMode.SplitVertical || CurrentSplitMode == SplitMode.Split4Screen && !cameraZoomed[rc.cameraNumber])
                             {
                                 return v - rc.sSize.x / 4f;
                             }
@@ -509,7 +511,7 @@ namespace SplitScreenCoop
                         c.Emit(OpCodes.Ldarg_0); // RoomCamera
                         c.EmitDelegate<Func<float, RoomCamera, float>>((v, rc) =>
                         {
-                            if (CurrentSplitMode == SplitMode.SplitVertical || CurrentSplitMode == SplitMode.Split4Screen)
+                            if (CurrentSplitMode == SplitMode.SplitVertical || CurrentSplitMode == SplitMode.Split4Screen && !cameraZoomed[rc.cameraNumber])
                             {
                                 return v + rc.sSize.x / 4f;
                             }
@@ -521,7 +523,7 @@ namespace SplitScreenCoop
                         c.Emit(OpCodes.Ldarg_0); // RoomCamera
                         c.EmitDelegate<Func<float, RoomCamera, float>>((v, rc) =>
                         {
-                            if (CurrentSplitMode == SplitMode.SplitHorizontal || CurrentSplitMode == SplitMode.Split4Screen)
+                            if (CurrentSplitMode == SplitMode.SplitHorizontal || CurrentSplitMode == SplitMode.Split4Screen && !cameraZoomed[rc.cameraNumber])
                             {
                                 return v - rc.sSize.y / 4f;
                             }
@@ -534,7 +536,7 @@ namespace SplitScreenCoop
                         c.Emit(OpCodes.Ldarg_0); // RoomCamera
                         c.EmitDelegate<Func<float, RoomCamera, float>>((v, rc) =>
                         {
-                            if (CurrentSplitMode == SplitMode.SplitHorizontal || CurrentSplitMode == SplitMode.Split4Screen)
+                            if (CurrentSplitMode == SplitMode.SplitHorizontal || CurrentSplitMode == SplitMode.Split4Screen && !cameraZoomed[rc.cameraNumber])
                             {
                                 return v + rc.sSize.y / 4f;
                             }

@@ -202,6 +202,12 @@ namespace SplitScreenCoop
             }
         }
 
+        private void Player_TriggerCameraSwitch1(On.Player.orig_TriggerCameraSwitch orig, Player self)
+        {
+            if (CurrentSplitMode == SplitMode.Split4Screen)
+                ToggleCameraZoom(self.abstractCreature.world.game.cameras[self.playerState.playerNumber]);
+            orig(self);
+        }
         // $15
         private void Player_ctor(On.Player.orig_ctor orig, Player self, AbstractCreature abstractCreature, World world)
         {
@@ -219,5 +225,11 @@ namespace SplitScreenCoop
             orig(self, storyGameCharacter);
         }
 
+        // Don't move a player when they have map opened
+        private void Player_JollyInputUpdate(On.Player.orig_JollyInputUpdate orig, Player self)
+        {
+            orig(self);
+            self.standStillOnMapButton = true;
+        }
     }
 }

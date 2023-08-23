@@ -85,6 +85,9 @@ namespace SplitScreenCoop
         public bool init;
         public static ManualLogSource sLogger;
         public static bool selfSufficientCoop;
+        public static bool[] cameraZoomed = new bool[] { false, false, false, false };
+        public static Rect[] cameraSourcePositions = new Rect[] { new Rect(0.25f, 0.25f, 0.5f, 0.5f), new Rect(0.25f, 0.25f, 0.5f, 0.5f), new Rect(0.25f, 0.25f, 0.5f, 0.5f), new Rect(0.25f, 0.25f, 0.5f, 0.5f) };
+        public static Rect[] cameraTargetPositions = new Rect[] { new Rect(0f, 0.5f, 0.5f, 0.5f), new Rect(0.5f, 0.5f, 0.5f, 0.5f), new Rect(0f, 0f, 0.5f, 0.5f), new Rect(0.5f, 0f, 0.5f, 0.5f) };
 
         public void Update()
         {
@@ -160,6 +163,9 @@ namespace SplitScreenCoop
                 On.Menu.SlugcatSelectMenu.StartGame += SlugcatSelectMenu_StartGame;
                 On.RoomCamera.ChangeCameraToPlayer += RoomCamera_ChangeCameraToPlayer;
                 IL.Player.TriggerCameraSwitch += Player_TriggerCameraSwitch;
+                On.Player.TriggerCameraSwitch += Player_TriggerCameraSwitch1;
+                On.Player.JollyInputUpdate += Player_JollyInputUpdate;
+
                 On.Player.ctor += Player_ctor;
                 IL.HUD.HUD.InitSinglePlayerHud += InitSinglePlayerHud;
                 HookEndpointManager.Modify(typeof(JollyCoop.JollyHUD.JollyPlayerSpecificHud).GetProperty("Camera").GetGetMethod(),
@@ -398,8 +404,10 @@ namespace SplitScreenCoop
                         for(int i = 1; i < ncams; i++)
                         {
                             cams[i] = new RoomCamera(self, i);
-                            if(self.session.Players.Count > i)
+                            if (i < self.session.Players.Count)
                                 cams[i].followAbstractCreature = self.session.Players[i];
+                            else
+                                cams[i].followAbstractCreature = self.session.Players[0];
                         }
                         cams[0].followAbstractCreature = self.session.Players[0];
                     }
@@ -430,10 +438,13 @@ namespace SplitScreenCoop
             if (self.cameras.Length > 1)
             {
                 Logger.LogInfo("camera2 detected");
-                for (int i = 0; i < self.session.Players.Count && i < self.cameras.Length; i++)
+                for (int i = 0; i < self.cameras.Length; i++)
                 {
-                    Logger.LogInfo($"RainWorldGame_ctor cam {self.cameras[i].cameraNumber} to p {(self.session.Players[i].state as PlayerState).playerNumber}");
-                    self.cameras[i].followAbstractCreature = self.session.Players[i];
+                    //Logger.LogInfo($"RainWorldGame_ctor cam {self.cameras[i].cameraNumber} to p {(self.session.Players[i].state as PlayerState).playerNumber}");
+                    if (i < self.session.Players.Count)
+                        self.cameras[i].followAbstractCreature = self.session.Players[i];
+                    else
+                        self.cameras[i].followAbstractCreature = self.session.Players[0];
                 }
                 SetSplitMode(alwaysSplit ? preferedSplitMode : SplitMode.NoSplit, self);
             }
@@ -595,17 +606,14 @@ namespace SplitScreenCoop
                             break;
                         case SplitMode.Split4Screen:
                             Logger.LogInfo("Split4Screen");
-                            cameraListeners[0].direct = false;
-                            cameraListeners[0].SetMap(new Rect(0.25f, 0.25f, 0.5f, 0.5f), new Rect(0f, 0.5f, 0.5f, 0.5f));
-                            fcameras[1].enabled = true;
-                            cameraListeners[1].direct = false;
-                            cameraListeners[1].SetMap(new Rect(0.25f, 0.25f, 0.5f, 0.5f), new Rect(0.5f, 0.5f, 0.5f, 0.5f));
-                            fcameras[2].enabled = true;
-                            cameraListeners[2].direct = false;
-                            cameraListeners[2].SetMap(new Rect(0.25f, 0.25f, 0.5f, 0.5f), new Rect(0f, 0f, 0.5f, 0.5f));
-                            fcameras[3].enabled = true;
-                            cameraListeners[3].direct = false;
-                            cameraListeners[3].SetMap(new Rect(0.25f, 0.25f, 0.5f, 0.5f), new Rect(0.5f, 0f, 0.5f, 0.5f));
+
+                            for (int i = 0; i < 4; i++)
+                            {
+                                fcameras[i].enabled = true;
+                                cameraListeners[i].direct = false;
+                                cameraListeners[i].SetMap(cameraSourcePositions[i], cameraTargetPositions[i]);
+                                cameraZoomed[i] = false;
+                            }
                             break;
                         default:
                             break;
@@ -675,8 +683,16 @@ namespace SplitScreenCoop
         /// </summary>
         public void OffsetHud(RoomCamera self)
         {
-            self.hud?.map?.inFrontContainer?.SetPosition(camOffsets[self.cameraNumber]); // map icons 
-            self.ReturnFContainer("HUD2").SetPosition(GetSplitScreenHudOffset(self, self.cameraNumber)); // rain/karma/food
+            self.hud?.map?.inFrontContainer?.SetPosition(camOffsets[self.cameraNumber]); // map icons
+            // rain/karma/food
+            if (cameraZoomed[self.cameraNumber])
+            {
+                self.ReturnFContainer("HUD2").SetPosition(camOffsets[self.cameraNumber]);
+            }
+            else
+            {
+                self.ReturnFContainer("HUD2").SetPosition(GetSplitScreenHudOffset(self, self.cameraNumber));
+            }
         }
 
         /// <summary>
@@ -732,7 +748,8 @@ namespace SplitScreenCoop
         {
             orig(self);
             var offset = GetRelativeSplitScreenOffset(self.jollyHud.Camera);
-            self.drawPos -= offset;
+            if (!cameraZoomed[self.jollyHud.Camera.cameraNumber])
+                self.drawPos -= offset;
         }
 
         public void JollyOffRoom_Update1(ILContext il)
@@ -746,7 +763,10 @@ namespace SplitScreenCoop
                 c.Emit(Mono.Cecil.Cil.OpCodes.Ldarg_0);
                 c.EmitDelegate<Func<int, JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom, int>>((returnValue, self) =>
                 {
-                    return returnValue + (int)GetRelativeSplitScreenOffset(self.jollyHud.Camera).x;
+                    if (!cameraZoomed[self.jollyHud.Camera.cameraNumber])
+                        return returnValue + (int)GetRelativeSplitScreenOffset(self.jollyHud.Camera).x;
+                    else
+                        return returnValue;
                 });
                 c.Index++;
 
@@ -756,7 +776,10 @@ namespace SplitScreenCoop
                 c.Emit(Mono.Cecil.Cil.OpCodes.Ldarg_0);
                 c.EmitDelegate<Func<int, JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom, int>>((returnValue, self) =>
                 {
-                    return returnValue + (int)GetRelativeSplitScreenOffset(self.jollyHud.Camera).x;
+                    if (!cameraZoomed[self.jollyHud.Camera.cameraNumber])
+                        return returnValue + (int)GetRelativeSplitScreenOffset(self.jollyHud.Camera).x;
+                    else
+                        return returnValue;
                 });
                 c.Index++;
 
@@ -766,7 +789,10 @@ namespace SplitScreenCoop
                 c.Emit(Mono.Cecil.Cil.OpCodes.Ldarg_0);
                 c.EmitDelegate<Func<int, JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom, int>>((returnValue, self) =>
                 {
-                    return returnValue + (int)GetRelativeSplitScreenOffset(self.jollyHud.Camera).y;
+                    if (!cameraZoomed[self.jollyHud.Camera.cameraNumber])
+                        return returnValue + (int)GetRelativeSplitScreenOffset(self.jollyHud.Camera).y;
+                    else
+                        return returnValue;
                 });
                 c.Index++;
 
@@ -776,7 +802,10 @@ namespace SplitScreenCoop
                 c.Emit(Mono.Cecil.Cil.OpCodes.Ldarg_0);
                 c.EmitDelegate<Func<int, JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom, int>>((returnValue, self) =>
                 {
-                    return returnValue + (int)GetRelativeSplitScreenOffset(self.jollyHud.Camera).y;
+                    if (!cameraZoomed[self.jollyHud.Camera.cameraNumber])
+                        return returnValue + (int)GetRelativeSplitScreenOffset(self.jollyHud.Camera).y;
+                    else
+                        return returnValue;
                 });
 
                 // Allow icons to appear when other slugcats are in the same room, but not on screen
@@ -786,13 +815,17 @@ namespace SplitScreenCoop
                 c.Emit(Mono.Cecil.Cil.OpCodes.Ldarg_0);
                 c.EmitDelegate<Func<bool, JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom, bool>>((returnValue, self) =>
                 {
+                    if (self.jollyHud.Camera == null || self.jollyHud.RealizedPlayer == null || self.jollyHud.RealizedPlayer.abstractCreature == null)
+                    {
+                        return true;
+                    }
                     // if result == true - hide slugcat icon
                     var followedCreature = self.jollyHud.Camera.followAbstractCreature;
                     if (followedCreature == self.jollyHud.RealizedPlayer.abstractCreature)
                         return returnValue;
                     if (returnValue)
                     {
-                        if (followedCreature.realizedCreature == null)
+                        if (followedCreature.realizedCreature == null || followedCreature.Room == null)
                         {
                             return true;
                         }
@@ -801,8 +834,15 @@ namespace SplitScreenCoop
                         var distanceY = Math.Abs(self.playerPos.y - followedPos.y);
 
                         var magicNumber = 2.6f; // otherwise slugcat icons are sometimes placed weirdly
-                        if (distanceX > (self.jollyHud.Camera.sSize.x - magicNumber * GetRelativeSplitScreenOffset(self.jollyHud.Camera).x) ||
-                            distanceY > (self.jollyHud.Camera.sSize.y - magicNumber * GetRelativeSplitScreenOffset(self.jollyHud.Camera).y))
+                        if (cameraZoomed[self.jollyHud.Camera.cameraNumber])
+                        {
+                            if (distanceX > (self.jollyHud.Camera.sSize.x) || distanceY > (self.jollyHud.Camera.sSize.y))
+                            {
+                                returnValue = false;
+                            }
+                        }
+                        else if (distanceX > (self.jollyHud.Camera.sSize.x - magicNumber * GetRelativeSplitScreenOffset(self.jollyHud.Camera).x) ||
+                                distanceY > (self.jollyHud.Camera.sSize.y - magicNumber * GetRelativeSplitScreenOffset(self.jollyHud.Camera).y))
                         {
                             returnValue = false;
                         }
@@ -937,10 +977,26 @@ namespace SplitScreenCoop
             }
         }
 
+        public void ToggleCameraZoom(RoomCamera cam)
+        {
+            var camNum = cam.cameraNumber;
+            cameraZoomed[camNum] ^= true;
+            bool zoomed = cameraZoomed[camNum];
+            if (zoomed)
+            {
+                cameraListeners[camNum].SetMap(new Rect(0f, 0f, 1f, 1f), cameraTargetPositions[camNum]);
+            }
+            else
+            {
+                cameraListeners[camNum].SetMap(cameraSourcePositions[camNum], cameraTargetPositions[camNum]);
+            }
+            OffsetHud(cam);
+        }
         public Vector2 GetSplitScreenHudOffset(RoomCamera camera, int cameraNumber)
         {
             Vector2 offset = camOffsets[cameraNumber];
-            offset += GetRelativeSplitScreenOffset(camera);
+            if (!cameraZoomed[camera.cameraNumber])
+                offset += GetRelativeSplitScreenOffset(camera);
             return offset;
         }
 
