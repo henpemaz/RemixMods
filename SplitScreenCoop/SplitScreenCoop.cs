@@ -818,7 +818,7 @@ namespace SplitScreenCoop
                         return returnValue;
                     if (returnValue)
                     {
-                        if (followedCreature.realizedCreature == null)
+                        if (followedCreature.realizedCreature == null || followedCreature.Room == null)
                         {
                             return true;
                         }
