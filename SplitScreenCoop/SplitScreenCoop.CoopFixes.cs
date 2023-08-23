@@ -166,7 +166,6 @@ namespace SplitScreenCoop
             Logger.LogInfo("RoomCamera_ChangeCameraToPlayer");
             if(self.game.cameras.Length >= self.game.Players.Count || CurrentSplitMode == SplitMode.Split4Screen) // prevent camera switching
             {
-                ToggleCameraZoom(self);
                 return;
             }
             if (cameraTarget.realizedCreature is Player player)
@@ -203,6 +202,12 @@ namespace SplitScreenCoop
             }
         }
 
+        private void Player_TriggerCameraSwitch1(On.Player.orig_TriggerCameraSwitch orig, Player self)
+        {
+            if (CurrentSplitMode == SplitMode.Split4Screen)
+                ToggleCameraZoom(self.abstractCreature.world.game.cameras[self.playerState.playerNumber]);
+            orig(self);
+        }
         // $15
         private void Player_ctor(On.Player.orig_ctor orig, Player self, AbstractCreature abstractCreature, World world)
         {
