@@ -981,10 +981,14 @@ namespace SplitScreenCoop
 
         public void ToggleCameraZoom(RoomCamera cam)
         {
+            SetCameraZoom(cam, !cameraZoomed[cam.cameraNumber]);
+        }
+
+        public void SetCameraZoom(RoomCamera cam, bool enabled)
+        {
             var camNum = cam.cameraNumber;
-            cameraZoomed[camNum] ^= true;
-            bool zoomed = cameraZoomed[camNum];
-            if (zoomed)
+            cameraZoomed[camNum] = enabled;
+            if (enabled)
             {
                 cameraListeners[camNum].SetMap(new Rect(0f, 0f, 1f, 1f), cameraTargetPositions[camNum]);
             }
@@ -994,6 +998,7 @@ namespace SplitScreenCoop
             }
             OffsetHud(cam);
         }
+
         public Vector2 GetSplitScreenHudOffset(RoomCamera camera, int cameraNumber)
         {
             Vector2 offset = camOffsets[cameraNumber];

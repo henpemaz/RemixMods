@@ -38,6 +38,7 @@ namespace SplitScreenCoop
         }
         
         public bool inpause; // non reentrant
+        public bool[] oldCameraZoom = new bool[] { false, false, false, false };
         /// <summary>
         /// Make 2 pause
         /// </summary>
@@ -85,6 +86,12 @@ namespace SplitScreenCoop
                     inpause = true;
                     try
                     {
+                        for (int i = 0; i < game.cameras.Count(); i++)
+                        {
+                            oldCameraZoom[i] = cameraZoomed[i];
+                            SetCameraZoom(game.cameras[i], false);
+                        }
+
                         var pause2 = new Menu.PauseMenu(manager, game);
                         var pause3 = new Menu.PauseMenu(manager, game);
                         var pause4 = new Menu.PauseMenu(manager, game);
@@ -109,6 +116,13 @@ namespace SplitScreenCoop
         public void PauseMenu_ShutDownProcess(On.Menu.PauseMenu.orig_ShutDownProcess orig, Menu.PauseMenu self)
         {
             orig(self);
+            if (CurrentSplitMode == SplitMode.Split4Screen)
+            {
+                for (int i = 0; i < self.game.cameras.Count(); i++)
+                {
+                    SetCameraZoom(self.game.cameras[i], oldCameraZoom[i]);
+                }
+            }
             var otherpause = self.manager?.sideProcesses?.FirstOrDefault(t => t is Menu.PauseMenu);
             if (otherpause != null) self.manager.StopSideProcess(otherpause); // removes from sideprocesses list so this isnt a recursive loop
         }
