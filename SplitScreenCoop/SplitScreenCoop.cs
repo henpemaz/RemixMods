@@ -64,6 +64,7 @@ namespace SplitScreenCoop
         public static SplitMode CurrentSplitMode;
         public static SplitMode preferedSplitMode = SplitMode.SplitVertical;
         public static bool alwaysSplit;
+        public static bool allowCameraSwapping;
         public static bool dualDisplays;
 
         public static Camera[] fcameras = new Camera[4];
@@ -246,6 +247,7 @@ namespace SplitScreenCoop
             preferedSplitMode = Options.PreferredSplitMode.Value;
             dualDisplays = Options.DualDisplays.Value;
             alwaysSplit = Options.AlwaysSplit.Value;
+            allowCameraSwapping = Options.AllowCameraSwapping.Value;
 
             if (dualDisplays && DualDisplaySupported())
             {
@@ -534,7 +536,7 @@ namespace SplitScreenCoop
 
                 if (CurrentSplitMode != SplitMode.NoSplit && self.cameras[0].room != null && self.cameras[0].room.abstractRoom.name == "SB_L01") // honestly jolly
                 {
-                    ConsiderColapsing(self);
+                    ConsiderColapsing(self, false);
                 }
             }
 
@@ -642,11 +644,11 @@ namespace SplitScreenCoop
         /// <summary>
         /// consider changing camera targets if someones dead or deleted
         /// </summary>
-        public void ConsiderColapsing(RainWorldGame game)
+        public void ConsiderColapsing(RainWorldGame game, bool regionSwitch)
         {
             if (game.cameras.Length > 1)
             {
-                if (game.Players.Count == 2 && alwaysSplit) return; // I guess
+                if (!regionSwitch && (game.Players.Count == game.cameras.Length && alwaysSplit)) return; // I guess
                 foreach (var cam in game.cameras)
                 {
                     // if following dead critter, switch!

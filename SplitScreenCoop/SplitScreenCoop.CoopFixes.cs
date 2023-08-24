@@ -164,7 +164,7 @@ namespace SplitScreenCoop
         private void RoomCamera_ChangeCameraToPlayer(On.RoomCamera.orig_ChangeCameraToPlayer orig, RoomCamera self, AbstractCreature cameraTarget)
         {
             Logger.LogInfo("RoomCamera_ChangeCameraToPlayer");
-            if(self.game.cameras.Length >= self.game.Players.Count || CurrentSplitMode == SplitMode.Split4Screen) // prevent camera switching
+            if(!allowCameraSwapping && self.game.cameras.Length >= self.game.Players.Count) // prevent camera switching
             {
                 return;
             }
@@ -191,6 +191,7 @@ namespace SplitScreenCoop
                     var wasrc = rc;
                     rc = self.abstractCreature.world.game.cameras.FirstOrDefault(c => c.followAbstractCreature == self.abstractCreature);
                     if (rc == null) self.abstractCreature.world.game.cameras.FirstOrDefault(c => IsCreatureDead(c.followAbstractCreature));
+                    if (rc == null) self.abstractCreature.world.game.cameras.FirstOrDefault(c => c.cameraNumber == self.playerState.playerNumber);
                     if (rc == null) rc = wasrc;
                     return rc;
                 });
@@ -204,7 +205,7 @@ namespace SplitScreenCoop
 
         private void Player_TriggerCameraSwitch1(On.Player.orig_TriggerCameraSwitch orig, Player self)
         {
-            if (CurrentSplitMode == SplitMode.Split4Screen)
+            if (CurrentSplitMode == SplitMode.Split4Screen && self.abstractCreature.world.game.cameras.Length > self.playerState.playerNumber)
                 ToggleCameraZoom(self.abstractCreature.world.game.cameras[self.playerState.playerNumber]);
             orig(self);
         }

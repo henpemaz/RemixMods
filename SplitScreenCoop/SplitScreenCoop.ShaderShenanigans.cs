@@ -10,7 +10,7 @@ namespace SplitScreenCoop
 
         public void RoomCamera_MoveCamera_Room_int(On.RoomCamera.orig_MoveCamera_Room_int orig, RoomCamera self, Room newRoom, int camPos)
         {
-            ConsiderColapsing(self.game); // this one is special
+            ConsiderColapsing(self.game, false); // this one is special
 
             var prev = curCamera;
             try

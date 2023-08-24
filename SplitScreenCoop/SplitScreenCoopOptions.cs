@@ -29,11 +29,13 @@ public class SplitScreenCoopOptions : OptionInterface
     {
         PreferredSplitMode = this.config.Bind("PreferredSplitMode", SplitScreenCoop.SplitMode.SplitVertical);
         AlwaysSplit = this.config.Bind("AlwaysSplit", false);
+        AllowCameraSwapping = this.config.Bind("AllowCameraSwapping", false);
         DualDisplays = this.config.Bind("DualDisplays", false);
     }
 
     public readonly Configurable<SplitScreenCoop.SplitMode> PreferredSplitMode;
     public readonly Configurable<bool> AlwaysSplit;
+    public readonly Configurable<bool> AllowCameraSwapping;
     public readonly Configurable<bool> DualDisplays;
     private UIelement[] UIArrOptions;
 
@@ -49,8 +51,11 @@ public class SplitScreenCoopOptions : OptionInterface
             new OpCheckBox(AlwaysSplit, 10f, 450),
             new OpLabel(40f, 450, "Permanent split mode") { verticalAlignment = OpLabel.LabelVAlignment.Center },
 
-            e = new OpCheckBox(DualDisplays, 10f, 380) { description = "Requires two physical displays" },
-            new OpLabel(40f, 380, "Dual Display (experimental)") { verticalAlignment = OpLabel.LabelVAlignment.Center },
+            new OpCheckBox(AllowCameraSwapping, 10f, 410),
+            new OpLabel(40f, 410, "Allow camera swapping even if there's enough cameras") { verticalAlignment = OpLabel.LabelVAlignment.Center },
+
+            e = new OpCheckBox(DualDisplays, 10f, 370) { description = "Requires two physical displays" },
+            new OpLabel(40f, 370, "Dual Display (experimental)") { verticalAlignment = OpLabel.LabelVAlignment.Center },
             
             // added last due to overlap
             new OpLabel(10f, 520, "Split Mode") { verticalAlignment = OpLabel.LabelVAlignment.Center },

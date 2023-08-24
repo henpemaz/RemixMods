@@ -33,7 +33,7 @@ namespace SplitScreenCoop
         /// </summary>
         public void OverWorld_WorldLoaded(On.OverWorld.orig_WorldLoaded orig, OverWorld self)
         {
-            ConsiderColapsing(self.game);
+            ConsiderColapsing(self.game, true);
             orig(self);
             if (realizer2 != null) MakeRealizer2(self.game);
         }
