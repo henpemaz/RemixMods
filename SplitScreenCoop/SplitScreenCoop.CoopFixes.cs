@@ -190,8 +190,8 @@ namespace SplitScreenCoop
                 {
                     var wasrc = rc;
                     rc = self.abstractCreature.world.game.cameras.FirstOrDefault(c => c.followAbstractCreature == self.abstractCreature);
-                    if (rc == null) self.abstractCreature.world.game.cameras.FirstOrDefault(c => IsCreatureDead(c.followAbstractCreature));
-                    if (rc == null) self.abstractCreature.world.game.cameras.FirstOrDefault(c => c.cameraNumber == self.playerState.playerNumber);
+                    if (rc == null) rc = self.abstractCreature.world.game.cameras.FirstOrDefault(c => IsCreatureDead(c.followAbstractCreature));
+                    if (rc == null) rc = self.abstractCreature.world.game.cameras.FirstOrDefault(c => c.cameraNumber == self.playerState.playerNumber);
                     if (rc == null) rc = wasrc;
                     return rc;
                 });
@@ -209,6 +209,7 @@ namespace SplitScreenCoop
                 ToggleCameraZoom(self.abstractCreature.world.game.cameras[self.playerState.playerNumber]);
             orig(self);
         }
+
         // $15
         private void Player_ctor(On.Player.orig_ctor orig, Player self, AbstractCreature abstractCreature, World world)
         {
