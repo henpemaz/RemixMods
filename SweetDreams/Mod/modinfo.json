@@ -3,10 +3,10 @@
   "name": "Sweet Dreams",
   "version": "0.1.0",
   "target_game_version": "v1.9",
-  "authors": "Henpemaz",
-  "description": "Sleep well, little scug",
+  "authors": "Intikus, Tealppup & Henpemaz",
+  "description": "One need not travel alone.<LINE><LINE>This mod adds illustrations and songs for your lizard friends that accompany you in your journey. All vanilla slugcats and lizard combinations for you to enjoy the end of the cycle.",
   "requirements": [],
   "requirements_names": [],
-  "tags": [  ],
+  "tags": [],
   "checksum_override_version": false
 }

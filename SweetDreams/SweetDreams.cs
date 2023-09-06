@@ -1,19 +1,15 @@
-﻿using System;
+﻿using BepInEx;
+using Menu;
+using Newtonsoft.Json;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Security;
 using System.Security.Permissions;
 using UnityEngine;
-using BepInEx;
-
-using Menu;
-using System.Collections.Generic;
-using System.IO;
-using Newtonsoft.Json;
-using MonoMod.Utils;
-using System.Collections;
-using BepInEx.Logging;
-using Steamworks;
 
 [assembly: AssemblyTrademark("Intikus, Tealppup & Henpemaz")]
 [module: UnverifiableCode]
@@ -35,7 +31,7 @@ namespace SweetDreams
         private void RainWorld_PostModsInit(On.RainWorld.orig_PostModsInit orig, RainWorld self)
         {
             orig(self);
-             try
+            try
             {
                 Logger.LogInfo("PostModsInit");
                 LoadSlugsAndDreams(self);
@@ -47,14 +43,14 @@ namespace SweetDreams
             }
         }
 
-        void Update() // debug thinghies
-        {
-            if (Input.GetKeyDown("1"))
-            {
-                if (GameObject.FindObjectOfType<RainWorld>().processManager.currentMainLoop is RainWorldGame game)
-                    game.Win(false);
-            }
-        }
+        //void Update() // debug thinghies
+        //{
+        //    if (Input.GetKeyDown("1"))
+        //    {
+        //        if (GameObject.FindObjectOfType<RainWorld>().processManager.currentMainLoop is RainWorldGame game)
+        //            game.Win(false);
+        //    }
+        //}
 
         public bool init;
         public void OnModsInit(On.RainWorld.orig_OnModsInit orig, RainWorld self)
@@ -131,7 +127,7 @@ namespace SweetDreams
             }
         }
 
-        public static Dictionary<string,SlugDreams> dreamtionary;
+        public static Dictionary<string, SlugDreams> dreamtionary;
         public void LoadSlugsAndDreams(RainWorld rw)
         {
             dreamtionary = new();
@@ -173,7 +169,7 @@ namespace SweetDreams
         {
             foreach (var key in other.Keys)
             {
-                if(self.Contains(key))
+                if (self.Contains(key))
                 {
                     var obj = self[key];
                     if (obj is IUpdatebleFromOther iufo) iufo.UpdateFromOther((IUpdatebleFromOther)other[key]);
@@ -200,7 +196,7 @@ namespace SweetDreams
 
             public void UpdateFromOther(IUpdatebleFromOther other)
             {
-                if(other is SlugDreams sd)
+                if (other is SlugDreams sd)
                 {
                     SweetDreams.UpdateFromOther(dreams, sd.dreams);
                     fallback = sd.fallback ?? fallback;
@@ -212,7 +208,7 @@ namespace SweetDreams
         public class Dream : IUpdatebleFromOther
         {
             public string song;
-            public Dictionary<string,DreamLayer> layers = new();
+            public Dictionary<string, DreamLayer> layers = new();
 
             public void UpdateFromOther(IUpdatebleFromOther other)
             {

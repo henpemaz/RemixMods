@@ -1,0 +1,610 @@
+{
+  "White": {
+    "sleepingSprite": "sleep - 2 - white",
+    "fallback": null,
+    "dreams": {
+      "Salamander": {
+        "song": "sd_Salamander",
+        "layers": {
+          "bottom": {
+            "sprite": "white_axo Layer 4",
+            "onTop": false,
+            "pos": [
+              747,
+              168
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          },
+          "top": {
+            "sprite": "white_axo Layer 5",
+            "onTop": true,
+            "pos": [
+              817,
+              203
+            ],
+            "slugDepthOffset": -0.1,
+            "shader": "basic"
+          }
+        }
+      },
+      "BlackLizard": {
+        "song": "sd_Black_Lizard",
+        "layers": {
+          "bottom": {
+            "sprite": "white_blacklizard Layer 3",
+            "onTop": false,
+            "pos": [
+              710,
+              159
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          },
+          "top": {
+            "sprite": "white_blacklizard Layer 4",
+            "onTop": true,
+            "pos": [
+              870,
+              172
+            ],
+            "slugDepthOffset": -0.1,
+            "shader": "basic"
+          }
+        }
+      },
+      "BlueLizard": {
+        "song": "sd_Blue_Lizard",
+        "layers": {
+          "bottom": {
+            "sprite": "white_bluelizard Layer 11",
+            "onTop": false,
+            "pos": [
+              719,
+              152
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          },
+          "top": {
+            "sprite": "white_bluelizard Layer 9",
+            "onTop": true,
+            "pos": [
+              891,
+              272
+            ],
+            "slugDepthOffset": -0.1,
+            "shader": "basic"
+          }
+        }
+      },
+      "GreenLizard": {
+        "song": "sd_Green_Lizard",
+        "layers": {
+          "bottom": {
+            "sprite": "white_greenlizard head",
+            "onTop": false,
+            "pos": [
+              700,
+              174
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          },
+          "top": {
+            "sprite": "white_greenlizard tail",
+            "onTop": true,
+            "pos": [
+              669,
+              97
+            ],
+            "slugDepthOffset": -0.1,
+            "shader": "basic"
+          }
+        }
+      },
+      "YelloLlizard": {
+        "song": "sd_Yellow_Lizard",
+        "layers": {
+          "bottom": {
+            "sprite": "white_orangelizard Layer 3",
+            "onTop": false,
+            "pos": [
+              730,
+              120
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          }
+        }
+      },
+      "PinkLizard": {
+        "song": "sd_Pink_Lizard",
+        "layers": {
+          "bottom": {
+            "sprite": "white_pinklizard Behindsug",
+            "onTop": false,
+            "pos": [
+              765,
+              167
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          },
+          "top": {
+            "sprite": "white_pinklizard Oversug",
+            "onTop": true,
+            "pos": [
+              716,
+              143
+            ],
+            "slugDepthOffset": -0.1,
+            "shader": "basic"
+          }
+        }
+      },
+      "RedLizard": {
+        "song": "sd_Red_Lizard",
+        "layers": {
+          "bottom": {
+            "sprite": "white_redlizard Layer 4",
+            "onTop": false,
+            "pos": [
+              488,
+              114
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          },
+          "top": {
+            "sprite": "white_redlizard Layer 2",
+            "onTop": true,
+            "pos": [
+              885,
+              126
+            ],
+            "slugDepthOffset": -0.1,
+            "shader": "basic"
+          }
+        }
+      },
+      "WhiteLizard": {
+        "song": "sd_White_Lizard",
+        "layers": {
+          "bottom": {
+            "sprite": "white_whitelizard Layer 3",
+            "onTop": false,
+            "pos": [
+              606,
+              142
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          }
+        }
+      }
+    }
+  },
+  "Yellow": {
+    "sleepingSprite": "sleep - 2 - yellow",
+    "fallback": null,
+    "dreams": {
+      "Salamander": {
+        "song": "sd_Salamander",
+        "layers": {
+          "bottom": {
+            "sprite": "monk_axo Layer 1",
+            "onTop": false,
+            "pos": [
+              729,
+              168
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          },
+          "top": {
+            "sprite": "monk_axo Layer 2",
+            "onTop": true,
+            "pos": [
+              799,
+              203
+            ],
+            "slugDepthOffset": -0.1,
+            "shader": "basic"
+          }
+        }
+      },
+      "BlackLizard": {
+        "song": "sd_Black_Lizard",
+        "layers": {
+          "bottom": {
+            "sprite": "monk_blacklizard Layer 2",
+            "onTop": false,
+            "pos": [
+              710,
+              159
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          },
+          "top": {
+            "sprite": "monk_blacklizard Layer 1",
+            "onTop": true,
+            "pos": [
+              897,
+              172
+            ],
+            "slugDepthOffset": -0.1,
+            "shader": "basic"
+          }
+        }
+      },
+      "BlueLizard": {
+        "song": "sd_Blue_Lizard",
+        "layers": {
+          "bottom": {
+            "sprite": "monk_bluelizard Layer 2",
+            "onTop": false,
+            "pos": [
+              681,
+              133
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          },
+          "top": {
+            "sprite": "monk_bluelizard Layer 1",
+            "onTop": true,
+            "pos": [
+              852,
+              270
+            ],
+            "slugDepthOffset": -0.1,
+            "shader": "basic"
+          }
+        }
+      },
+      "CyanLizard": {
+        "song": "sd_Cyan_Lizard",
+        "layers": {
+          "bottom": {
+            "sprite": "monk_cyanlizard Layer 2",
+            "onTop": false,
+            "pos": [
+              666,
+              122
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          },
+          "top": {
+            "sprite": "monk_cyanlizard Layer 1",
+            "onTop": true,
+            "pos": [
+              750,
+              101
+            ],
+            "slugDepthOffset": -0.1,
+            "shader": "basic"
+          }
+        }
+      },
+      "GreenLizard": {
+        "song": "sd_Green_Lizard",
+        "layers": {
+          "bottom": {
+            "sprite": "monk_greenlizard Layer 1",
+            "onTop": false,
+            "pos": [
+              685,
+              174
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          },
+          "top": {
+            "sprite": "monk_greenlizard Layer 2",
+            "onTop": true,
+            "pos": [
+              1012,
+              97
+            ],
+            "slugDepthOffset": -0.1,
+            "shader": "basic"
+          }
+        }
+      },
+      "PinkLizard": {
+        "song": "sd_Pink_Lizard",
+        "layers": {
+          "bottom": {
+            "sprite": "monk_pinklizard Layer 4",
+            "onTop": false,
+            "pos": [
+              706,
+              167
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          },
+          "top": {
+            "sprite": "monk_pinklizard Layer 5",
+            "onTop": true,
+            "pos": [
+              932,
+              143
+            ],
+            "slugDepthOffset": -0.1,
+            "shader": "basic"
+          }
+        }
+      },
+      "RedLizard": {
+        "song": "sd_Red_Lizard",
+        "layers": {
+          "bottom": {
+            "sprite": "monk_redlizard Layer 1",
+            "onTop": false,
+            "pos": [
+              488,
+              117
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          },
+          "top": {
+            "sprite": "monk_redlizard Layer 2",
+            "onTop": true,
+            "pos": [
+              885,
+              126
+            ],
+            "slugDepthOffset": -0.1,
+            "shader": "basic"
+          }
+        }
+      },
+      "WhiteLizard": {
+        "song": "sd_White_Lizard",
+        "layers": {
+          "bottom": {
+            "sprite": "monk_whitelizard Layer 1",
+            "onTop": false,
+            "pos": [
+              606,
+              142
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          }
+        }
+      },
+      "YelloLlizard": {
+        "song": "sd_Yellow_Lizard",
+        "layers": {
+          "bottom": {
+            "sprite": "monk_yellowlizard Layer 1",
+            "onTop": false,
+            "pos": [
+              730,
+              120
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          }
+        }
+      }
+    }
+  },
+  "Red": {
+    "sleepingSprite": "sleep - 2 - red",
+    "fallback": null,
+    "dreams": {
+      "Salamander": {
+        "song": "sd_Salamander",
+        "layers": {
+          "bottom": {
+            "sprite": "hunter_axo Layer 3",
+            "onTop": false,
+            "pos": [
+              722,
+              168
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          },
+          "top": {
+            "sprite": "hunter_axo Layer 1",
+            "onTop": true,
+            "pos": [
+              797,
+              203
+            ],
+            "slugDepthOffset": -0.1,
+            "shader": "basic"
+          }
+        }
+      },
+      "BlackLizard": {
+        "song": "sd_Black_Lizard",
+        "layers": {
+          "bottom": {
+            "sprite": "hunter_blacklizard Layer 2",
+            "onTop": false,
+            "pos": [
+              710,
+              159
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          },
+          "top": {
+            "sprite": "hunter_blacklizard Layer 1",
+            "onTop": true,
+            "pos": [
+              828,
+              172
+            ],
+            "slugDepthOffset": -0.1,
+            "shader": "basic"
+          }
+        }
+      },
+      "BlueLizard": {
+        "song": "sd_Blue_Lizard",
+        "layers": {
+          "bottom": {
+            "sprite": "hunter_bluelizard Layer 2",
+            "onTop": false,
+            "pos": [
+              690,
+              152
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          },
+          "top": {
+            "sprite": "hunter_bluelizard Layer 1",
+            "onTop": true,
+            "pos": [
+              862,
+              288
+            ],
+            "slugDepthOffset": -0.1,
+            "shader": "basic"
+          }
+        }
+      },
+      "CyanLizard": {
+        "song": "sd_Cyan_Lizard",
+        "layers": {
+          "bottom": {
+            "sprite": "hunter_cyanlizard Layer 12",
+            "onTop": false,
+            "pos": [
+              680,
+              126
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          },
+          "top": {
+            "sprite": "hunter_cyanlizard Layer 11",
+            "onTop": true,
+            "pos": [
+              764,
+              105
+            ],
+            "slugDepthOffset": -0.1,
+            "shader": "basic"
+          }
+        }
+      },
+      "GreenLizard": {
+        "song": "sd_Green_Lizard",
+        "layers": {
+          "bottom": {
+            "sprite": "hunter_greenlizard Layer 2",
+            "onTop": false,
+            "pos": [
+              715,
+              174
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          },
+          "top": {
+            "sprite": "hunter_greenlizard Layer 1",
+            "onTop": true,
+            "pos": [
+              1042,
+              97
+            ],
+            "slugDepthOffset": -0.1,
+            "shader": "basic"
+          }
+        }
+      },
+      "YelloLlizard": {
+        "song": "sd_Yellow_Lizard",
+        "layers": {
+          "bottom": {
+            "sprite": "hunter_orangelizard Layer 1",
+            "onTop": false,
+            "pos": [
+              730,
+              120
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          }
+        }
+      },
+      "PinkLizard": {
+        "song": "sd_Pink_Lizard",
+        "layers": {
+          "bottom": {
+            "sprite": "hunter_pinklizard Layer 2",
+            "onTop": false,
+            "pos": [
+              741,
+              144
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          },
+          "top": {
+            "sprite": "hunter_pinklizard Layer 1",
+            "onTop": true,
+            "pos": [
+              713,
+              142
+            ],
+            "slugDepthOffset": -0.1,
+            "shader": "basic"
+          }
+        }
+      },
+      "RedLizard": {
+        "song": "sd_Red_Lizard",
+        "layers": {
+          "bottom": {
+            "sprite": "hunter_redlizard Layer 2",
+            "onTop": false,
+            "pos": [
+              488,
+              117
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          },
+          "top": {
+            "sprite": "hunter_redlizard Layer 1",
+            "onTop": true,
+            "pos": [
+              885,
+              126
+            ],
+            "slugDepthOffset": -0.1,
+            "shader": "basic"
+          }
+        }
+      },
+      "WhiteLizard": {
+        "song": "sd_White_Lizard",
+        "layers": {
+          "bottom": {
+            "sprite": "hunter_whitelizard Layer 1",
+            "onTop": false,
+            "pos": [
+              606,
+              142
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          }
+        }
+      }
+    }
+  }
+}
