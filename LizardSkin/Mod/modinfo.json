@@ -1,0 +1,12 @@
+{
+  "id": "henpemaz_lizardskin",
+  "name": "Lizard Skin",
+  "version": "0.1.0",
+  "target_game_version": "v1.9",
+  "authors": "Henpemaz",
+  "description": "",
+  "requirements": [],
+  "requirements_names": [],
+  "tags": [ "Cosmetics" ],
+  "checksum_override_version": false
+}
