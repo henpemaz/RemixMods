@@ -78,6 +78,31 @@
           }
         }
       },
+	  "CyanLizard": {
+        "song": "sd_Cyan_Lizard",
+        "layers": {
+          "bottom": {
+            "sprite": "white_cyanlizard Layer 2",
+            "onTop": false,
+            "pos": [
+              680,
+              126
+            ],
+            "slugDepthOffset": 0.1,
+            "shader": "basic"
+          },
+          "top": {
+            "sprite": "white_cyanlizard Layer 1",
+            "onTop": true,
+            "pos": [
+              764,
+              105
+            ],
+            "slugDepthOffset": -0.1,
+            "shader": "basic"
+          }
+        }
+      },
       "GreenLizard": {
         "song": "sd_Green_Lizard",
         "layers": {

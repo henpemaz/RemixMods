@@ -18,7 +18,7 @@ using UnityEngine;
 
 namespace SweetDreams
 {
-    [BepInPlugin("com.henpemaz.sweetdreams", "Sweet Dreams", "0.1.1")]
+    [BepInPlugin("com.henpemaz.sweetdreams", "Sweet Dreams", "0.1.2")]
     public class SweetDreams : BaseUnityPlugin
     {
         public void OnEnable()
