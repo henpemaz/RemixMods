@@ -24,6 +24,7 @@ namespace LizardSkin
         private ProfileManager activeManager;
         private static LizKinCosmeticData cosmeticOnClipboard;
         private List<LizKinCosmeticData.CosmeticPanel> panelsToRemove;
+        private Configurable<int> changes;
         private readonly List<LizKinCosmeticData.CosmeticPanel> panelsToAdd;
         private static LizardSkinOI instance;
 
@@ -31,6 +32,8 @@ namespace LizardSkin
         {
             panelsToAdd = new List<LizKinCosmeticData.CosmeticPanel>();
             panelsToRemove = new List<LizKinCosmeticData.CosmeticPanel>();
+
+            this.changes = config.Bind<int>("version", 0);
 
             instance = this;
         }
@@ -48,6 +51,8 @@ You can pick Cosmetics of several types, edit their settings and configure rando
 
         public override void Initialize()
         {
+            changes.Value = 0;
+
             base.Initialize();
             LizardSkin.Debug("LizardSkinOI Initialize");
 
@@ -73,6 +78,8 @@ You can pick Cosmetics of several types, edit their settings and configure rando
             LizardSkin.Debug("making tabs");
             for (int i = 0; i < configBeingEdited.profiles.Count; i++)
             {
+                LizardSkin.Debug("LizardSkin profiles");
+
                 Tabs[i + 1] = new OpTab(this, configBeingEdited.profiles[i].profileName);
                 ProfileManager manager = new ProfileManager(this, configBeingEdited.profiles[i], Tabs[i + 1]);
                 Tabs[i + 1].AddItems(manager);
@@ -84,6 +91,8 @@ You can pick Cosmetics of several types, edit their settings and configure rando
             Tabs[Tabs.Length - 1].AddItems(new NewProfileHandler(this), new NotAManagerTab(this));
 
             this.OnConfigChanged += ConfigOnChange;
+            LizardSkin.Debug("LizardSkin init done");
+
         }
 
         public override void Update()
@@ -105,17 +114,20 @@ You can pick Cosmetics of several types, edit their settings and configure rando
             panelsToRemove.Clear();
 
             // Fix me if still neeeded lol
-            //if (refreshOnNextFrame)
-            //{
-            //    LizardSkin.Debug("LizardSkinOI Refreshing");
-            //    lastSelectedTab = ConfigContainer.ActiveTabIndex;
+            if (refreshOnNextFrame)
+            {
+                LizardSkin.Debug("LizardSkinOI Refreshing");
+                lastSelectedTab = ConfigContainer.ActiveTabIndex;
 
-            //    ConfigMenu.RefreshCurrentConfig();
-            //    refreshOnNextFrame = false;
-            //    loadingFromRefresh = true;
-            //}
+                // ??????
+                //ConfigMenu.RefreshCurrentConfig();
+                refreshOnNextFrame = false;
+                loadingFromRefresh = true;
+            }
             if (jumpToTab.HasValue)
             {
+                LizardSkin.Debug("LizardSkin jumpToTab");
+
                 ConfigContainer._ChangeActiveTab(jumpToTab.Value);
                 jumpToTab = null;
             }
@@ -123,6 +135,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
 
         public void OnbtnProfileMvUp(UIfocusable trigger)
         {
+            LizardSkin.Debug("LizardSkin OnbtnProfileMvUp");
             if (activeManager != null) activeManager.SignalSwitchOut();
             if (configBeingEdited.MoveProfileUp(activeManager.profileData))
             {
@@ -135,6 +148,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
 
         public void OnbtnProfileMvDown(UIfocusable trigger)
         {
+            LizardSkin.Debug("LizardSkin OnbtnProfileMvDown");
             if (activeManager != null) activeManager.SignalSwitchOut();
             if (configBeingEdited.MoveProfileDown(activeManager.profileData))
             {
@@ -147,6 +161,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
 
         public void OnbtnProfileDuplicate(UIfocusable trigger)
         {
+            LizardSkin.Debug("LizardSkin OnbtnProfileDuplicate");
             if (activeManager != null) activeManager.SignalSwitchOut();
             if (configBeingEdited.DuplicateProfile(activeManager.profileData))
             {
@@ -159,6 +174,8 @@ You can pick Cosmetics of several types, edit their settings and configure rando
 
         public void OnbtnProfileDelete(UIfocusable trigger)
         {
+            LizardSkin.Debug("LizardSkin OnbtnProfileDelete");
+
             if (activeManager != null) activeManager.SignalSwitchOut();
             if (configBeingEdited.DeleteProfile(activeManager.profileData))
             {
@@ -175,6 +192,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
             LizardSkin.Debug("LizardSkinOI Reloaded");
             if (loadingFromRefresh && lastSelectedTab < Tabs.Length - 1)
             {
+                LizardSkin.Debug("LizardSkin jumpToTab");
                 //ConfigContainer.ActiveTabIndex = lastSelectedTab;
                 jumpToTab = new int?(lastSelectedTab);
             }
@@ -184,15 +202,13 @@ You can pick Cosmetics of several types, edit their settings and configure rando
         // When our data changes so we can singal CM there's stuff to be saved
         internal void DataChanged()
         {
-            // todo
-            //OptionScript.configChanged = true;
+            LizardSkin.Debug("LizardSkin DataChanged");
+            changes.Value++;
         }
-
 
         // CM callback
         private void ConfigOnChange()
         {
-            LizardSkin.Debug("LizardSkinOI ConfigOnChange");
             LizardSkin.Debug("LizardSkinOI Conf save data");
             configBeingUsed = LizKinConfiguration.Clone(configBeingEdited);
             SaveLizKinData();
@@ -223,6 +239,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
 
         private static LizKinConfiguration MakeEmptyLizKinData()
         {
+            LizardSkin.Debug("LizardSkin MakeEmptyLizKinData");
             LizKinConfiguration conf = new LizKinConfiguration();
             LizKinProfileData myProfile = new LizKinProfileData();
             myProfile.profileName = "My Profile";
@@ -314,6 +331,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
         {
             public NewProfileHandler(LizardSkinOI lizardSkinOI) : base(new Vector2(0, 0), new Vector2(600, 600))
             {
+                LizardSkin.Debug("LizardSkinOI NewProfileHandler");
                 this.OnReactivate += lizardSkinOI.RequestNewProfile;
             }
         }
@@ -323,6 +341,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
         {
             public NotAManagerTab(LizardSkinOI lizardSkinOI) : base(new Vector2(0, 0), new Vector2(600, 600))
             {
+                LizardSkin.Debug("LizardSkinOI NotAManagerTab");
                 this.OnReactivate += () => lizardSkinOI.SwitchActiveManager(null);
             }
         }
@@ -333,6 +352,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
             private LizardSkinOI lizardSkinOI;
             public ReloadHandler(LizardSkinOI lizardSkinOI) : base(new Vector2(0, 0), new Vector2(600, 600))
             {
+                LizardSkin.Debug("LizardSkinOI ReloadHandler");
                 this.lizardSkinOI = lizardSkinOI;
                 this.OnReactivate += lizardSkinOI.Reloaded;
             }
@@ -598,7 +618,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
                 LizardSkin.Debug("LizardSkinOI MakeCosmEditPannels");
                 foreach (LizKinCosmeticData cosmeticData in profileData.cosmetics)
                 {
-                    //LizardSkin.Debug("Makin new panel");
+                    LizardSkin.Debug("Makin new panel");
 
                     LizKinCosmeticData.CosmeticPanel panel = cosmeticData.MakeEditPanel(this);
                     //CosmeticEditPanel editPanel = new CosmeticEditPanel(new Vector2(5, 0), new Vector2(360, 100));Moving child element
@@ -622,15 +642,19 @@ You can pick Cosmetics of several types, edit their settings and configure rando
 
                 totalheight = Mathf.Max(totalheight, cosmeticsBox.contentSize);
 
-                if (totalheight != cosmeticsBox.contentSize) cosmeticsBox.SetContentSize(totalheight);
+                if (totalheight != cosmeticsBox.contentSize)
+                {
+                    LizardSkin.Debug("resizing contents");
+                    cosmeticsBox.SetContentSize(totalheight, false);
+                }
 
 
                 float topleftpos = cosmEditPanelMarginVert / 2;
                 foreach (LizKinCosmeticData.CosmeticPanel panel in cosmPanels)
                 {
-
+                    LizardSkin.Debug("Moving panel to " + (totalheight - topleftpos));
                     panel.topLeft = new Vector2(3, totalheight - topleftpos);
-                    // LizardSkin.Debug("Moved panel to " + (totalheight - topleftpos));
+                    LizardSkin.Debug("panel is at " + panel.topLeft);
                     topleftpos += panel.size.y + cosmEditPanelMarginVert;
                 }
 
@@ -902,10 +926,11 @@ You can pick Cosmetics of several types, edit their settings and configure rando
 
             public void AddSelfAndChildrenToTab(OpTab tab)
             {
+                LizardSkin.Debug("call to AddSelfAndChildrenToTab");
                 foreach (UIelement child in children)
                 {
-                    originalPositions.Add(child.GetPos());
-                    child.pos += topLeft;
+                    originalPositions.Add(child._pos);
+                    child._pos += topLeft;
                 }
                 tab.AddItems(this);
                 foreach (UIelement child in children)
@@ -917,11 +942,11 @@ You can pick Cosmetics of several types, edit their settings and configure rando
             }
             public void AddSelfAndChildrenToScroll(OpScrollBox scroll)
             {
-                // LizardSkin.DebugError("call to AddSelfAndChildrenToScroll");
+                LizardSkin.Debug("call to GroupPanel AddSelfAndChildrenToScroll");
                 foreach (UIelement child in children)
                 {
-                    originalPositions.Add(child.GetPos());
-                    child.pos += topLeft; // calls on change anyways
+                    originalPositions.Add(child._pos);
+                    child._pos += topLeft; // calls on change anyways
                 }
                 scroll.AddItems(this);
                 foreach (UIelement child in children)
@@ -961,6 +986,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
 
             public void DestroySelfAndChildren()
             {
+                LizardSkin.Debug("call to GroupPanel DestroySelfAndChildren");
                 foreach (UIelement child in children)
                 {
                     if (child is IHaveChildren) (child as IHaveChildren).DestroySelfAndChildren();
@@ -973,14 +999,18 @@ You can pick Cosmetics of several types, edit their settings and configure rando
             {
                 base.Change();
                 if (originalPositions.Count == 0) return; // called from ctor before initialized
+                LizardSkin.Debug("call to GroupPanel Change");
+                LizardSkin.Debug($"main: topleft:{topLeft};; pos:{pos};; _pos:{_pos}");
+
                 for (int i = 0; i < children.Count; i++)
                 {
-                    children[i].pos = topLeft + originalPositions[i];
+                    children[i].SetPos(topLeft + originalPositions[i]);
+                    LizardSkin.Debug($"child: pos:{children[i].pos};; _pos:{children[i]._pos}");
                     //LizardSkin.Debug("Moving child element to " + (topLeft + originalPositions[i]));
                 }
             }
 
-            public Vector2 topLeft { get { return GetPos() + new Vector2(0, size.y); } set { pos = value - new Vector2(0, size.y); Change(); } } // Setting this should call onchange and move children
+            public Vector2 topLeft { get { return GetPos() + new Vector2(0, size.y); } set { SetPos(value - new Vector2(0, size.y)); } }
         }
 
         internal delegate void OnValueChangedHandler();
