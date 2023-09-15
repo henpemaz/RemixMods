@@ -1,0 +1,11 @@
+{
+  "id": "henpemaz_lapmod",
+  "name": "Lap Mod",
+  "version": "0.1.0",
+  "target_game_version": "v1.9",
+  "authors": "Henpemaz",
+  "description": "Lap Mod, a speedrun/movement practice tool! Practice that one room over and over, tap map when exiting to go to the next room.",
+  "requirements": [],
+  "requirements_names": [],
+  "checksum_override_version": false
+}

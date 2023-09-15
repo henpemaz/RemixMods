@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SweetDreams", "SweetDreams\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LizardSkin", "LizardSkin\LizardSkin.csproj", "{762FC68E-69A4-4BF1-8E4D-F544ED638728}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LapMod", "LapMod\LapMod.csproj", "{787B67E9-CC52-45F4-9448-EDDCB7017032}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -57,6 +59,10 @@ Global
 		{762FC68E-69A4-4BF1-8E4D-F544ED638728}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{762FC68E-69A4-4BF1-8E4D-F544ED638728}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{762FC68E-69A4-4BF1-8E4D-F544ED638728}.Release|Any CPU.Build.0 = Release|Any CPU
+		{787B67E9-CC52-45F4-9448-EDDCB7017032}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{787B67E9-CC52-45F4-9448-EDDCB7017032}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{787B67E9-CC52-45F4-9448-EDDCB7017032}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{787B67E9-CC52-45F4-9448-EDDCB7017032}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
