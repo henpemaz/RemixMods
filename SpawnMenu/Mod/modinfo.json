@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "target_game_version": "v1.9",
   "authors": "Henpemaz",
-  "description": "Arena sandbox menu for story mode",
+  "description": "Arena sandbox menu for story mode. Activate by right-clicking on the pause screen, supports controller as well.",
   "requirements": [],
   "requirements_names": [],
   "checksum_override_version": false

@@ -101,7 +101,7 @@ namespace SpawnMenu
         {
             if(self.room.game.session is StoryGameSession)
             {
-                if (self.room.game.Players[0].realizedCreature is Creature c) return c.firstChunk.pos;
+                if (self.room.game.Players.Count > 0 && self.room.game.Players[0].realizedCreature is Creature c) return c.firstChunk.pos;
                 return Vector2.zero;
             }
             return orig(self, timeStacker);
