@@ -90,6 +90,8 @@ namespace SplitScreenCoop
         public static Rect[] cameraSourcePositions = new Rect[] { new Rect(0.25f, 0.25f, 0.5f, 0.5f), new Rect(0.25f, 0.25f, 0.5f, 0.5f), new Rect(0.25f, 0.25f, 0.5f, 0.5f), new Rect(0.25f, 0.25f, 0.5f, 0.5f) };
         public static Rect[] cameraTargetPositions = new Rect[] { new Rect(0f, 0.5f, 0.5f, 0.5f), new Rect(0.5f, 0.5f, 0.5f, 0.5f), new Rect(0f, 0f, 0.5f, 0.5f), new Rect(0.5f, 0f, 0.5f, 0.5f) };
 
+        public static RainWorld rainworldGameObject = null;
+
         public void Update()
         {
             if (Input.GetKeyDown("f8"))
@@ -106,6 +108,8 @@ namespace SplitScreenCoop
         {
             try
             {
+                rainworldGameObject = GameObject.FindObjectOfType<RainWorld>();
+
                 // Register OptionsInterface
                 Options ??= new SplitScreenCoopOptions();
                 MachineConnector.SetRegisteredOI("henpemaz_splitscreencoop", Options);
