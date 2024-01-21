@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.UI;
@@ -117,10 +118,14 @@ namespace SplitScreenCoop
             /// </summary>
             public void OnPreRender()
             {
-                foreach (var kv in ShaderColors) Shader.SetGlobalColor(kv.Key, kv.Value);
-                foreach (var kv in ShaderVectors) Shader.SetGlobalVector(kv.Key, kv.Value);
-                foreach (var kv in ShaderFloats) Shader.SetGlobalFloat(kv.Key, kv.Value);
-                foreach (var kv in ShaderTextures) Shader.SetGlobalTexture(kv.Key, kv.Value);
+                foreach (var kv in ShaderColors.ToArray())
+                    Shader.SetGlobalColor(kv.Key, kv.Value);
+                foreach (var kv in ShaderVectors.ToArray())
+                    Shader.SetGlobalVector(kv.Key, kv.Value);
+                foreach (var kv in ShaderFloats.ToArray())
+                    Shader.SetGlobalFloat(kv.Key, kv.Value);
+                foreach (var kv in ShaderTextures.ToArray())
+                    Shader.SetGlobalTexture(kv.Key, kv.Value);
             }
 
             /// <summary>
