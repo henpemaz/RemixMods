@@ -1,7 +1,7 @@
 {
   "id": "henpemaz_splitscreencoop",
   "name": "SplitScreen Co-op",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "target_game_version": "v1.9",
   "authors": "Henpemaz, Kert",
   "description": "Two player co-op with splitscreen for the base game, or up to four players sharing two or four cameras if using Jolly Co-op.<LINE><LINE>Supports players splitting up far away and sleeping in different shelters (not fully supported if using Jolly). Currently, both players will still wake up in the same shelter.<LINE><LINE>Planned features:<LINE>- Saving in different shelters<LINE>- Collor picker for player 2<LINE><LINE>Originally by Henpemaz<LINE>Github link: https://github.com/henpemaz/RemixMods<LINE>Special thanks to:<LINE>- Intikus, helped with the trailer<LINE>- NoirCatto, playtesting and support<LINE>- Kert, implemented 4-way split and zoom feature!",
