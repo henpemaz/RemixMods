@@ -74,7 +74,7 @@ namespace SplitScreenCoop
             {
                 l.ShaderColors[propertyName] = vec;
             }
-            else if (curCamera == -1 && !(rainworldGameObject.processManager?.currentMainLoop is RainWorldGame game))
+            else if ((propertyName == "_mapCol" || propertyName == "_MapWaterCol") && !(rainworldGameObject.processManager?.currentMainLoop is RainWorldGame game))
             {
                 cameraListeners[0].ShaderColors[propertyName] = vec;
             }
@@ -88,7 +88,7 @@ namespace SplitScreenCoop
             {
                 l.ShaderVectors[propertyName] = vec;
             }
-            else if (curCamera == -1 && !(rainworldGameObject.processManager?.currentMainLoop is RainWorldGame game))
+            else if (propertyName == "_mapPan" && !(rainworldGameObject.processManager?.currentMainLoop is RainWorldGame game))
             {
                 cameraListeners[0].ShaderVectors[propertyName] = vec;
             }
@@ -102,10 +102,6 @@ namespace SplitScreenCoop
             {
                 l.ShaderFloats[propertyName] = f;
             }
-            else if (curCamera == -1 && !(rainworldGameObject.processManager?.currentMainLoop is RainWorldGame game))
-            {
-                cameraListeners[0].ShaderFloats[propertyName] = f;
-            }
         }
 
         public delegate void delSetGlobalTexture(string propertyName, Texture t);
@@ -116,7 +112,7 @@ namespace SplitScreenCoop
             {
                 l.ShaderTextures[propertyName] = t;
             }
-            else if (curCamera == -1 && !(rainworldGameObject.processManager?.currentMainLoop is RainWorldGame game))
+            else if (propertyName == "_mapFogTexture" && !(rainworldGameObject.processManager?.currentMainLoop is RainWorldGame game))
             {
                 cameraListeners[0].ShaderTextures[propertyName] = t;
             }
