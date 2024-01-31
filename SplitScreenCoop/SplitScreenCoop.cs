@@ -19,7 +19,7 @@ using System.Runtime.CompilerServices;
 
 namespace SplitScreenCoop
 {
-    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.13")]
+    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.14")]
     public partial class SplitScreenCoop : BaseUnityPlugin
     {
         public static SplitScreenCoopOptions Options;
@@ -180,6 +180,14 @@ namespace SplitScreenCoop
                 On.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom.Update += JollyOffRoom_Update;
                 IL.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom.Update += JollyOffRoom_Update1;
                 IL.HUD.Map.Draw += HudMap_Draw;
+
+                // CustomDecal
+                On.CustomDecal.ctor += CustomDecal_ctor;
+                On.CustomDecal.DrawSprites += CustomDecal_DrawSprites;
+                On.CustomDecal.InitiateSprites += CustomDecal_InitiateSprites;
+                On.CustomDecal.Update += CustomDecal_Update;
+                On.CustomDecal.UpdateMesh += CustomDecal_UpdateMesh;
+                On.CustomDecal.UpdateAsset += CustomDecal_UpdateAsset;
 
                 // Shader shenanigans
                 // wrapped calls to store shader globals
@@ -1028,6 +1036,55 @@ namespace SplitScreenCoop
             }
             return offset;
         }
+
+        public static void CustomDecal_ctor(On.CustomDecal.orig_ctor orig, CustomDecal self, PlacedObject placedObject)
+        {
+            orig(self, placedObject);
+            for (int i = 0; i < 4; i++)
+            {
+                self.SetMeshDirty(i, self.meshDirty);
+                self.SetElementDirty(i, self.elementDirty);
+            }
+        }
+		
+        public static void CustomDecal_DrawSprites(On.CustomDecal.orig_DrawSprites orig, CustomDecal self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
+        {
+            int cameraNumber = rCam.cameraNumber;
+            self.meshDirty = self.IsMeshDirty(cameraNumber);
+            self.elementDirty = self.IsElementDirty(cameraNumber);
+
+            orig(self, sLeaser, rCam, timeStacker, camPos);
+
+            self.SetMeshDirty(cameraNumber, self.meshDirty);
+            self.SetElementDirty(cameraNumber, self.elementDirty);
+        }
+
+        public static void CustomDecal_InitiateSprites(On.CustomDecal.orig_InitiateSprites orig, CustomDecal self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam)
+        {
+            orig(self, sLeaser, rCam);
+            self.SetMeshDirty(rCam.cameraNumber, self.meshDirty);
+        }
+
+        public static void CustomDecal_Update(On.CustomDecal.orig_Update orig, CustomDecal self, bool eu)
+        {
+            orig(self, eu);
+            for (int i = 0; i < 4; i++)
+                self.SetMeshDirty(i, self.meshDirty);
+        }
+
+        public static void CustomDecal_UpdateMesh(On.CustomDecal.orig_UpdateMesh orig, CustomDecal self)
+        {
+            orig(self);
+            for (int i = 0; i < 4; i++)
+                self.SetMeshDirty(i, self.meshDirty);
+        }
+
+        public static void CustomDecal_UpdateAsset(On.CustomDecal.orig_UpdateAsset orig, CustomDecal self)
+        {
+            orig(self);
+            for (int i = 0; i < 4; i++)
+                self.SetElementDirty(i, self.meshDirty);
+        }
     }
 
     public static class JollyHUDExtension
@@ -1045,6 +1102,33 @@ namespace SplitScreenCoop
         public static RoomCamera SetSplitScreenCamera(this JollyCoop.JollyHUD.JollyPlayerSpecificHud hud, RoomCamera cam)
         {
             return _cwt.GetValue(hud, _cwt => new()).cam = cam;
+        }
+    }
+
+    public static class CustomDecalExtension
+    {
+        public class SplitScreenCustomDecal
+        {
+            public bool[] meshDirty = new bool[4];
+            public bool[] elementDirty = new bool[4];
+        }
+
+        private static readonly ConditionalWeakTable<CustomDecal, SplitScreenCustomDecal> _cwt = new();
+        public static bool IsMeshDirty(this CustomDecal decal, int cameraNumber)
+        {
+            return _cwt.GetValue(decal, _cwt => new()).meshDirty[cameraNumber];
+        }
+        public static bool SetMeshDirty(this CustomDecal decal, int cameraNumber, bool isDirty)
+        {
+            return _cwt.GetValue(decal, _cwt => new()).meshDirty[cameraNumber] = isDirty;
+        }
+        public static bool IsElementDirty(this CustomDecal decal, int cameraNumber)
+        {
+            return _cwt.GetValue(decal, _cwt => new()).elementDirty[cameraNumber];
+        }
+        public static bool SetElementDirty(this CustomDecal decal, int cameraNumber, bool isDirty)
+        {
+            return _cwt.GetValue(decal, _cwt => new()).elementDirty[cameraNumber] = isDirty;
         }
     }
 }
