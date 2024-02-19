@@ -175,11 +175,12 @@ namespace SplitScreenCoop
                 IL.HUD.HUD.InitSinglePlayerHud += InitSinglePlayerHud;
                 HookEndpointManager.Modify(typeof(JollyCoop.JollyHUD.JollyPlayerSpecificHud).GetProperty("Camera").GetGetMethod(),
                     new ILContext.Manipulator(JollyPlayerSpecificHud_get_Camera));
-                On.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyPlayerArrow.Draw += JollyPlayerArrow_Draw;
-                On.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyDeathBump.Draw += JollyDeathBump_Draw;
-                On.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom.Update += JollyOffRoom_Update;
                 IL.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom.Update += JollyOffRoom_Update1;
                 IL.HUD.Map.Draw += HudMap_Draw;
+                On.HUD.KarmaMeter.Draw += KarmaMeter_Draw;
+                On.HUD.FoodMeter.Draw += FoodMeter_Draw;
+                On.HUD.RainMeter.Draw += RainMeter_Draw;
+                On.HUD.TextPrompt.Draw += TextPrompt_Draw;
 
                 // CustomDecal
                 On.CustomDecal.ctor += CustomDecal_ctor;
@@ -698,15 +699,6 @@ namespace SplitScreenCoop
         public void OffsetHud(RoomCamera self)
         {
             self.hud?.map?.inFrontContainer?.SetPosition(camOffsets[self.cameraNumber]); // map icons
-            // rain/karma/food
-            if (cameraZoomed[self.cameraNumber])
-            {
-                self.ReturnFContainer("HUD2").SetPosition(camOffsets[self.cameraNumber]);
-            }
-            else
-            {
-                self.ReturnFContainer("HUD2").SetPosition(GetSplitScreenHudOffset(self, self.cameraNumber));
-            }
         }
 
         /// <summary>
@@ -738,32 +730,127 @@ namespace SplitScreenCoop
             }
         }
 
-        public void JollyPlayerArrow_Draw(On.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyPlayerArrow.orig_Draw orig, JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyPlayerArrow self, float timeStacker)
+        public void FoodMeter_Draw(On.HUD.FoodMeter.orig_Draw orig, HUD.FoodMeter self, float timeStacker)
         {
+            var oldPos = self.pos;
+            var oldLastPos = self.lastPos;
+            RoomCamera cam = GetHUDPartCurrentCamera(self);
+            if (cam != null)
+            {
+                var offset = GetGlobalHudOffset(cam);
+                self.pos += offset;
+                self.lastPos += offset;
+            }
             orig(self, timeStacker);
-            var offset = GetSplitScreenHudOffset(self.jollyHud.Camera, 0);
-            self.mainSprite.x -= offset.x;
-            self.mainSprite.y -= offset.y;
-            self.gradient.x -= offset.x;
-            self.gradient.y -= offset.y;
-            self.label.x -= offset.x;
-            self.label.y -= offset.y;
+            if (cam != null)
+            {
+                self.pos = oldPos;
+                self.lastPos = oldLastPos;
+            }
         }
 
-        public void JollyDeathBump_Draw(On.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyDeathBump.orig_Draw orig, JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyDeathBump self, float timeStacker)
+        public void KarmaMeter_Draw(On.HUD.KarmaMeter.orig_Draw orig, HUD.KarmaMeter self, float timeStacker)
         {
+            var oldPos = self.pos;
+            var oldLastPos = self.lastPos;
+            RoomCamera cam = GetHUDPartCurrentCamera(self);
+            if (cam != null)
+            {
+                var offset = GetGlobalHudOffset(cam);
+                self.pos += offset;
+                self.lastPos += offset;
+            }
             orig(self, timeStacker);
-            var offset = GetSplitScreenHudOffset(self.jollyHud.Camera, 0);
-            self.symbolSprite.x -= offset.x;
-            self.symbolSprite.y -= offset.y;
+            if (cam != null)
+            {
+                self.pos = oldPos;
+                self.lastPos = oldLastPos;
+            }
         }
 
-        public void JollyOffRoom_Update(On.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom.orig_Update orig, JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom self)
+        public void RainMeter_Draw(On.HUD.RainMeter.orig_Draw orig, HUD.RainMeter self, float timeStacker)
         {
-            orig(self);
-            var offset = GetRelativeSplitScreenOffset(self.jollyHud.Camera);
-            if (!cameraZoomed[self.jollyHud.Camera.cameraNumber])
-                self.drawPos -= offset;
+            List<Vector2> oldPoses = new List<Vector2>();
+            List<Vector2> oldLastPoses = new List<Vector2>();
+            RoomCamera cam = GetHUDPartCurrentCamera(self);
+            if (cam != null)
+            {
+                var offset = GetGlobalHudOffset(cam);
+                for (int i = 0; i < self.circles.Length; i++)
+                {
+                    oldPoses.Add(self.circles[i].pos);
+                    oldLastPoses.Add(self.circles[i].lastPos);
+                    self.circles[i].pos += offset;
+                    self.circles[i].lastPos += offset;
+                }
+            }
+            orig(self, timeStacker);
+            if (cam != null)
+            {
+                for (int j = 0; j < self.circles.Length; j++)
+                {
+                    self.circles[j].pos = oldPoses[j];
+                    self.circles[j].lastPos = oldLastPoses[j];
+                }
+            }
+        }
+
+        public void TextPrompt_Draw(On.HUD.TextPrompt.orig_Draw orig, HUD.TextPrompt self, float timeStacker)
+        {
+            orig(self, timeStacker);
+            RoomCamera cam = GetHUDPartCurrentCamera(self);
+            if (cam != null)
+            {
+                var offset = GetGlobalHudOffset(cam);
+                // text
+                if (self.label != null)
+                {
+                    self.label.x += offset.x;
+                    self.label.y += offset.y;
+                }
+                if (self.musicSprite != null)
+                {
+                    self.musicSprite.x += offset.x;
+                    self.musicSprite.y += offset.y;
+                }
+                // background overlay that appears from top and bottom of the screen
+                if (self.sprites != null)
+                {
+                    if (self.sprites[0] != null)
+                        self.sprites[0].y -= offset.y;
+                    if (self.sprites.Length > 1 && self.sprites[1] != null)
+                        self.sprites[1].y += offset.y;
+                }
+                for (int j = 0; j < self.symbols.Count; j++)
+                {
+                    var symbol = self.symbols[j];
+                    if (symbol.symbolSprite != null)
+                    {
+                        self.symbols[j].symbolSprite.x += offset.x;
+                        self.symbols[j].symbolSprite.y += offset.y;
+                    }
+                    if (symbol.shadowSprite1 != null)
+                    {
+                        self.symbols[j].shadowSprite1.x += offset.x;
+                        self.symbols[j].shadowSprite1.y += offset.y;
+                    }
+                    if (symbol.shadowSprite2 != null)
+                    {
+                        self.symbols[j].shadowSprite2.x += offset.x;
+                        self.symbols[j].shadowSprite2.y += offset.y;
+                    }
+                }
+            }
+        }
+
+        public RoomCamera GetHUDPartCurrentCamera(HUD.HudPart hudPart)
+        {
+            if (curCamera == -1)
+                return null;
+            var loop = hudPart.hud.rainWorld.processManager.currentMainLoop;
+            if (loop is RainWorldGame)
+                return ((RainWorldGame)loop).cameras[curCamera];
+            return null;
         }
 
         public void JollyOffRoom_Update1(ILContext il)
@@ -855,8 +942,8 @@ namespace SplitScreenCoop
                                 returnValue = false;
                             }
                         }
-                        else if (distanceX > (self.jollyHud.Camera.sSize.x - magicNumber * GetRelativeSplitScreenOffset(self.jollyHud.Camera).x) ||
-                                distanceY > (self.jollyHud.Camera.sSize.y - magicNumber * GetRelativeSplitScreenOffset(self.jollyHud.Camera).y))
+                        else if (distanceX > Math.Abs(self.jollyHud.Camera.sSize.x - magicNumber * GetRelativeSplitScreenOffset(self.jollyHud.Camera).x) ||
+                                distanceY > Math.Abs(self.jollyHud.Camera.sSize.y - magicNumber * GetRelativeSplitScreenOffset(self.jollyHud.Camera).y))
                         {
                             returnValue = false;
                         }
@@ -1009,6 +1096,13 @@ namespace SplitScreenCoop
                 cameraListeners[camNum].SetMap(cameraSourcePositions[camNum], cameraTargetPositions[camNum]);
             }
             OffsetHud(cam);
+        }
+
+        public Vector2 GetGlobalHudOffset(RoomCamera camera)
+        {
+            if (!cameraZoomed[camera.cameraNumber])
+                return GetRelativeSplitScreenOffset(camera);
+            return new Vector2(0, 0);
         }
 
         public Vector2 GetSplitScreenHudOffset(RoomCamera camera, int cameraNumber)
