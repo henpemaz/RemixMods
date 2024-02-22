@@ -170,6 +170,7 @@ namespace SplitScreenCoop
                 IL.Player.TriggerCameraSwitch += Player_TriggerCameraSwitch;
                 On.Player.TriggerCameraSwitch += Player_TriggerCameraSwitch1;
                 On.Player.JollyInputUpdate += Player_JollyInputUpdate;
+                On.MoreSlugcats.HypothermiaMeter.Draw += HypothermiaMeter_Draw;
 
                 On.Player.ctor += Player_ctor;
                 IL.HUD.HUD.InitSinglePlayerHud += InitSinglePlayerHud;
@@ -848,6 +849,33 @@ namespace SplitScreenCoop
                         self.symbols[j].shadowSprite2.x += offset.x;
                         self.symbols[j].shadowSprite2.y += offset.y;
                     }
+                }
+            }
+        }
+
+        public void HypothermiaMeter_Draw(On.MoreSlugcats.HypothermiaMeter.orig_Draw orig, MoreSlugcats.HypothermiaMeter self, float timeStacker)
+        {
+            List<Vector2> oldPoses = new List<Vector2>();
+            List<Vector2> oldLastPoses = new List<Vector2>();
+            RoomCamera cam = GetHUDPartCurrentCamera(self);
+            if (cam != null)
+            {
+                var offset = GetGlobalHudOffset(cam);
+                for (int i = 0; i < self.circles.Length; i++)
+                {
+                    oldPoses.Add(self.circles[i].pos);
+                    oldLastPoses.Add(self.circles[i].lastPos);
+                    self.circles[i].pos += offset;
+                    self.circles[i].lastPos += offset;
+                }
+            }
+            orig(self, timeStacker);
+            if (cam != null)
+            {
+                for (int j = 0; j < self.circles.Length; j++)
+                {
+                    self.circles[j].pos = oldPoses[j];
+                    self.circles[j].lastPos = oldLastPoses[j];
                 }
             }
         }
