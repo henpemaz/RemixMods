@@ -66,6 +66,15 @@ namespace SplitScreenCoop
             }
         }
 
+        public void RoomCamera_UpdateSnowLight(On.RoomCamera.orig_UpdateSnowLight orig, RoomCamera self)
+        {
+            if (cameraListeners[self.cameraNumber] is CameraListener l)
+            {
+                l.OnPreRender();
+            }
+            orig(self);
+        }
+
         public delegate void delSetGlobalColor(string propertyName, Color vec);
         public void Shader_SetGlobalColor(delSetGlobalColor orig, string propertyName, Color vec)
         {
@@ -98,7 +107,7 @@ namespace SplitScreenCoop
         public void Shader_SetGlobalFloat(delSetGlobalFloat orig, string propertyName, float f)
         {
             orig(propertyName, f);
-            if (curCamera >= 0 && cameraListeners[curCamera] is CameraListener l)
+            if (curCamera >= 0 && cameraListeners[curCamera] is CameraListener l && (propertyName != "_RAIN"))
             {
                 l.ShaderFloats[propertyName] = f;
             }

@@ -190,12 +190,19 @@ namespace SplitScreenCoop
                 On.CustomDecal.UpdateMesh += CustomDecal_UpdateMesh;
                 On.CustomDecal.UpdateAsset += CustomDecal_UpdateAsset;
 
+                // Snow
+                On.MoreSlugcats.SnowSource.PackSnowData += SnowSource_PackSnowData;
+                On.MoreSlugcats.SnowSource.Update += SnowSource_Update;
+                On.RoofTopView.DustpuffSpawner.DustPuff.ApplyPalette += DustPuff_ApplyPalette;
+
                 // Shader shenanigans
                 // wrapped calls to store shader globals
                 On.RoomCamera.DrawUpdate += RoomCamera_DrawUpdate;
                 On.RoomCamera.Update += RoomCamera_Update;
                 On.RoomCamera.MoveCamera_int += RoomCamera_MoveCamera_int;
                 On.RoomCamera.MoveCamera_Room_int += RoomCamera_MoveCamera_Room_int; // can also colapse to single cam if one of the cams is dead
+                On.RoomCamera.UpdateSnowLight += RoomCamera_UpdateSnowLight;
+
                 // unity hooks
                 // set shader variables into a dict so it can be set per-camera
                 new Hook(typeof(Shader).GetMethod("SetGlobalColor", new Type[] { typeof(string), typeof(Color) }),
@@ -477,7 +484,9 @@ namespace SplitScreenCoop
         public void RoomCamera_ctor1(On.RoomCamera.orig_ctor orig, RoomCamera self, RainWorldGame game, int cameraNumber)
         {
             Logger.LogInfo("RoomCamera_ctor1 for camera #" + cameraNumber);
+            curCamera = cameraNumber;
             orig(self, game, cameraNumber);
+            curCamera = -1;
             self.splitScreenMode = false; // don't, mine is better
             self.offset = Vector2.zero;
             foreach (var c in self.SpriteLayers) c.SetPosition(camOffsets[self.cameraNumber]);
@@ -1179,6 +1188,102 @@ namespace SplitScreenCoop
             for (int i = 0; i < 4; i++)
                 self.SetElementDirty(i, self.meshDirty);
         }
+
+        public Vector4[] SnowSource_PackSnowData(On.MoreSlugcats.SnowSource.orig_PackSnowData orig, MoreSlugcats.SnowSource self)
+        {
+            Vector2 vector = self.room.cameraPositions[self.room.game.cameras[curCamera].currentCameraPosition];
+            Vector4[] array = new Vector4[3];
+            Vector2 vector2 = RWCustom.Custom.EncodeFloatRG((self.pos.x - vector.x) / 1400f * 0.3f + 0.3f);
+            Vector2 vector3 = RWCustom.Custom.EncodeFloatRG((self.pos.y - vector.y) / 800f * 0.3f + 0.3f);
+            Vector2 vector4 = RWCustom.Custom.EncodeFloatRG(self.rad / 1600f);
+            array[0] = new Vector4(vector2.x, vector2.y, vector3.x, vector3.y);
+            array[1] = new Vector4(vector4.x, vector4.y, self.intensity, self.noisiness);
+            array[2] = new Vector4(0f, 0f, 0f, (float)((int)self.shape) / 5f);
+            return array;
+        }
+
+        public void SnowSource_Update(On.MoreSlugcats.SnowSource.orig_Update orig, MoreSlugcats.SnowSource self, bool eu)
+        {
+            bool camChanged = false;
+            for (int i = 0; i < self.room.game.cameras.Length; i++)
+            {
+                RoomCamera cam = self.room.game.cameras[i];
+                if (cam.room == self.room)
+                {
+                    if (self.GetLastCamPos(i) != cam.currentCameraPosition)
+                    {
+                        camChanged = true;
+                        break;
+                    }
+                }
+            }
+
+            bool flag = false;
+            if (camChanged || self.shape != self.lastShape || self.noisiness != self.lastNoisiness || self.intensity != self.lastIntensity || self.pos != self.lastPos || self.rad != self.lastRad || (self.room.BeingViewed && self.visibility == 2))
+            {
+                flag = true;
+            }
+            if (flag && self.room.snow && self.room.BeingViewed)
+            {
+                int finalVisibility = self.visibility;
+                for (int j = 0; j < self.room.game.cameras.Length; j++)
+                {
+                    RoomCamera cam = self.room.game.cameras[j];
+                    if (cam.room != self.room)
+                        continue;
+                    int vis = self.CheckVisibility(cam.currentCameraPosition);
+                    if (vis != 0)
+                        finalVisibility = vis;
+                    cam.snowChange = true;
+                }
+                self.visibility = finalVisibility;
+            }
+
+            for (int i = 0; i < self.room.game.cameras.Length; i++)
+            {
+                RoomCamera cam = self.room.game.cameras[i];
+                self.SetLastCamPos(cam.cameraNumber, cam.currentCameraPosition);
+            }
+
+            self.lastPos = self.pos;
+            self.lastRad = self.rad;
+            self.lastIntensity = self.intensity;
+            self.lastNoisiness = self.noisiness;
+            self.lastShape = self.shape;
+        }
+
+        public void DustPuff_ApplyPalette(On.RoofTopView.DustpuffSpawner.DustPuff.orig_ApplyPalette orig, RoofTopView.DustpuffSpawner.DustPuff self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, RoomPalette palette)
+        {
+            if (rCam.room.snow)
+            {
+                int camNum = curCamera;
+                if (camNum == -1)
+                {
+                    for (int i = 0; i < rCam.room.game.cameras.Length; i++)
+                    {
+                        RoomCamera cam = rCam.room.game.cameras[i];
+                        if (rCam.room == cam.room)
+                        {
+                            camNum = i;
+                            break;
+                        }
+                    }
+                }
+                Vector2 vector = self.pos - rCam.room.cameraPositions[rCam.room.game.cameras[camNum].currentCameraPosition];
+                sLeaser.sprites[0].color = new Color(vector.x / 1400f, vector.y / 800f, 0f);
+            }
+            else
+                orig(self, sLeaser, rCam, palette);
+        }
+
+        public static void BlizzardGraphics_TileTexUpdate(On.MoreSlugcats.BlizzardGraphics.orig_TileTexUpdate orig, MoreSlugcats.BlizzardGraphics self)
+        {
+            if (cameraListeners[curCamera] is CameraListener l)
+            {
+                l.OnPreRender();
+            }
+            orig(self);
+        }
     }
 
     public static class JollyHUDExtension
@@ -1223,6 +1328,24 @@ namespace SplitScreenCoop
         public static bool SetElementDirty(this CustomDecal decal, int cameraNumber, bool isDirty)
         {
             return _cwt.GetValue(decal, _cwt => new()).elementDirty[cameraNumber] = isDirty;
+        }
+    }
+
+    public static class SnowSourceExtension
+    {
+        public class SplitScreenSnowSource
+        {
+            public int[] lastCam = new int[4];
+        }
+
+        private static readonly ConditionalWeakTable<MoreSlugcats.SnowSource, SplitScreenSnowSource> _cwt = new();
+        public static int SetLastCamPos(this MoreSlugcats.SnowSource ss, int cameraNumber, int val)
+        {
+            return _cwt.GetValue(ss, _cwt => new()).lastCam[cameraNumber] = val;
+        }
+        public static int GetLastCamPos(this MoreSlugcats.SnowSource ss, int cameraNumber)
+        {
+            return _cwt.GetValue(ss, _cwt => new()).lastCam[cameraNumber];
         }
     }
 }
