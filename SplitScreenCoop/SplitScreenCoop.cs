@@ -196,6 +196,9 @@ namespace SplitScreenCoop
                 On.MoreSlugcats.SnowSource.Update += SnowSource_Update;
                 On.RoofTopView.DustpuffSpawner.DustPuff.ApplyPalette += DustPuff_ApplyPalette;
 
+                // Blizzard
+                On.MoreSlugcats.BlizzardGraphics.DrawSprites += BlizzardGraphics_DrawSprites;
+
                 // Shader shenanigans
                 // wrapped calls to store shader globals
                 On.RoomCamera.DrawUpdate += RoomCamera_DrawUpdate;
@@ -1304,13 +1307,14 @@ namespace SplitScreenCoop
                 orig(self, sLeaser, rCam, palette);
         }
 
-        public static void BlizzardGraphics_TileTexUpdate(On.MoreSlugcats.BlizzardGraphics.orig_TileTexUpdate orig, MoreSlugcats.BlizzardGraphics self)
+        public static void BlizzardGraphics_DrawSprites(On.MoreSlugcats.BlizzardGraphics.orig_DrawSprites orig, MoreSlugcats.BlizzardGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
         {
-            if (cameraListeners[curCamera] is CameraListener l)
-            {
-                l.OnPreRender();
-            }
-            orig(self);
+            RoomCamera oldCam = self.rCam;
+            Vector2 vector = rCam.pos;
+            if (rCam.room == self.room)
+                self.rCam = rCam;
+            orig(self, sLeaser, rCam, timeStacker, camPos);
+            self.rCam = oldCam;
         }
     }
 
