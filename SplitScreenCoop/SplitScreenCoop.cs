@@ -19,7 +19,7 @@ using System.Runtime.CompilerServices;
 
 namespace SplitScreenCoop
 {
-    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.13")]
+    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.15")]
     public partial class SplitScreenCoop : BaseUnityPlugin
     {
         public static SplitScreenCoopOptions Options;
@@ -170,16 +170,35 @@ namespace SplitScreenCoop
                 IL.Player.TriggerCameraSwitch += Player_TriggerCameraSwitch;
                 On.Player.TriggerCameraSwitch += Player_TriggerCameraSwitch1;
                 On.Player.JollyInputUpdate += Player_JollyInputUpdate;
+                On.MoreSlugcats.HypothermiaMeter.Draw += HypothermiaMeter_Draw;
+                On.MoreSlugcats.GourmandMeter.Draw += GourmandMeter_Draw;
 
                 On.Player.ctor += Player_ctor;
                 IL.HUD.HUD.InitSinglePlayerHud += InitSinglePlayerHud;
                 HookEndpointManager.Modify(typeof(JollyCoop.JollyHUD.JollyPlayerSpecificHud).GetProperty("Camera").GetGetMethod(),
                     new ILContext.Manipulator(JollyPlayerSpecificHud_get_Camera));
-                On.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyPlayerArrow.Draw += JollyPlayerArrow_Draw;
-                On.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyDeathBump.Draw += JollyDeathBump_Draw;
-                On.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom.Update += JollyOffRoom_Update;
                 IL.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom.Update += JollyOffRoom_Update1;
                 IL.HUD.Map.Draw += HudMap_Draw;
+                On.HUD.KarmaMeter.Draw += KarmaMeter_Draw;
+                On.HUD.FoodMeter.Draw += FoodMeter_Draw;
+                On.HUD.RainMeter.Draw += RainMeter_Draw;
+                On.HUD.TextPrompt.Draw += TextPrompt_Draw;
+
+                // CustomDecal
+                On.CustomDecal.ctor += CustomDecal_ctor;
+                On.CustomDecal.DrawSprites += CustomDecal_DrawSprites;
+                On.CustomDecal.InitiateSprites += CustomDecal_InitiateSprites;
+                On.CustomDecal.Update += CustomDecal_Update;
+                On.CustomDecal.UpdateMesh += CustomDecal_UpdateMesh;
+                On.CustomDecal.UpdateAsset += CustomDecal_UpdateAsset;
+
+                // Snow
+                On.MoreSlugcats.SnowSource.PackSnowData += SnowSource_PackSnowData;
+                On.MoreSlugcats.SnowSource.Update += SnowSource_Update;
+                On.RoofTopView.DustpuffSpawner.DustPuff.ApplyPalette += DustPuff_ApplyPalette;
+
+                // Blizzard
+                On.MoreSlugcats.BlizzardGraphics.DrawSprites += BlizzardGraphics_DrawSprites;
 
                 // Shader shenanigans
                 // wrapped calls to store shader globals
@@ -187,15 +206,17 @@ namespace SplitScreenCoop
                 On.RoomCamera.Update += RoomCamera_Update;
                 On.RoomCamera.MoveCamera_int += RoomCamera_MoveCamera_int;
                 On.RoomCamera.MoveCamera_Room_int += RoomCamera_MoveCamera_Room_int; // can also colapse to single cam if one of the cams is dead
+                On.RoomCamera.UpdateSnowLight += RoomCamera_UpdateSnowLight;
+
                 // unity hooks
                 // set shader variables into a dict so it can be set per-camera
-                new Hook(typeof(Shader).GetMethod("SetGlobalColor", new Type[] { typeof(string), typeof(Color) }),
+                new Hook(typeof(Shader).GetMethod("SetGlobalColor", new Type[] { typeof(int), typeof(Color) }),
                     typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalColor"), this);
-                new Hook(typeof(Shader).GetMethod("SetGlobalVector", new Type[] { typeof(string), typeof(Vector4) }),
+                new Hook(typeof(Shader).GetMethod("SetGlobalVector", new Type[] { typeof(int), typeof(Vector4) }),
                     typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalVector"), this);
-                new Hook(typeof(Shader).GetMethod("SetGlobalFloat", new Type[] { typeof(string), typeof(float) }),
+                new Hook(typeof(Shader).GetMethod("SetGlobalFloat", new Type[] { typeof(int), typeof(float) }),
                     typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalFloat"), this);
-                new Hook(typeof(Shader).GetMethod("SetGlobalTexture", new Type[] { typeof(string), typeof(Texture) }),
+                new Hook(typeof(Shader).GetMethod("SetGlobalTexture", new Type[] { typeof(int), typeof(Texture) }),
                     typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalTexture"), this);
 
                 Logger.LogInfo("OnModsInit done");
@@ -468,7 +489,9 @@ namespace SplitScreenCoop
         public void RoomCamera_ctor1(On.RoomCamera.orig_ctor orig, RoomCamera self, RainWorldGame game, int cameraNumber)
         {
             Logger.LogInfo("RoomCamera_ctor1 for camera #" + cameraNumber);
+            curCamera = cameraNumber;
             orig(self, game, cameraNumber);
+            curCamera = -1;
             self.splitScreenMode = false; // don't, mine is better
             self.offset = Vector2.zero;
             foreach (var c in self.SpriteLayers) c.SetPosition(camOffsets[self.cameraNumber]);
@@ -690,15 +713,6 @@ namespace SplitScreenCoop
         public void OffsetHud(RoomCamera self)
         {
             self.hud?.map?.inFrontContainer?.SetPosition(camOffsets[self.cameraNumber]); // map icons
-            // rain/karma/food
-            if (cameraZoomed[self.cameraNumber])
-            {
-                self.ReturnFContainer("HUD2").SetPosition(camOffsets[self.cameraNumber]);
-            }
-            else
-            {
-                self.ReturnFContainer("HUD2").SetPosition(GetSplitScreenHudOffset(self, self.cameraNumber));
-            }
         }
 
         /// <summary>
@@ -730,32 +744,181 @@ namespace SplitScreenCoop
             }
         }
 
-        public void JollyPlayerArrow_Draw(On.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyPlayerArrow.orig_Draw orig, JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyPlayerArrow self, float timeStacker)
+        public void FoodMeter_Draw(On.HUD.FoodMeter.orig_Draw orig, HUD.FoodMeter self, float timeStacker)
         {
+            var oldPos = self.pos;
+            var oldLastPos = self.lastPos;
+            RoomCamera cam = GetHUDPartCurrentCamera(self);
+            if (cam != null)
+            {
+                var offset = GetGlobalHudOffset(cam);
+                self.pos += offset;
+                self.lastPos += offset;
+            }
             orig(self, timeStacker);
-            var offset = GetSplitScreenHudOffset(self.jollyHud.Camera, 0);
-            self.mainSprite.x -= offset.x;
-            self.mainSprite.y -= offset.y;
-            self.gradient.x -= offset.x;
-            self.gradient.y -= offset.y;
-            self.label.x -= offset.x;
-            self.label.y -= offset.y;
+            if (cam != null)
+            {
+                self.pos = oldPos;
+                self.lastPos = oldLastPos;
+            }
         }
 
-        public void JollyDeathBump_Draw(On.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyDeathBump.orig_Draw orig, JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyDeathBump self, float timeStacker)
+        public void KarmaMeter_Draw(On.HUD.KarmaMeter.orig_Draw orig, HUD.KarmaMeter self, float timeStacker)
         {
+            var oldPos = self.pos;
+            var oldLastPos = self.lastPos;
+            RoomCamera cam = GetHUDPartCurrentCamera(self);
+            if (cam != null)
+            {
+                var offset = GetGlobalHudOffset(cam);
+                self.pos += offset;
+                self.lastPos += offset;
+            }
             orig(self, timeStacker);
-            var offset = GetSplitScreenHudOffset(self.jollyHud.Camera, 0);
-            self.symbolSprite.x -= offset.x;
-            self.symbolSprite.y -= offset.y;
+            if (cam != null)
+            {
+                self.pos = oldPos;
+                self.lastPos = oldLastPos;
+            }
         }
 
-        public void JollyOffRoom_Update(On.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom.orig_Update orig, JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyOffRoom self)
+        public void RainMeter_Draw(On.HUD.RainMeter.orig_Draw orig, HUD.RainMeter self, float timeStacker)
         {
-            orig(self);
-            var offset = GetRelativeSplitScreenOffset(self.jollyHud.Camera);
-            if (!cameraZoomed[self.jollyHud.Camera.cameraNumber])
-                self.drawPos -= offset;
+            List<Vector2> oldPoses = new List<Vector2>();
+            List<Vector2> oldLastPoses = new List<Vector2>();
+            RoomCamera cam = GetHUDPartCurrentCamera(self);
+            if (cam != null)
+            {
+                var offset = GetGlobalHudOffset(cam);
+                for (int i = 0; i < self.circles.Length; i++)
+                {
+                    oldPoses.Add(self.circles[i].pos);
+                    oldLastPoses.Add(self.circles[i].lastPos);
+                    self.circles[i].pos += offset;
+                    self.circles[i].lastPos += offset;
+                }
+            }
+            orig(self, timeStacker);
+            if (cam != null)
+            {
+                for (int j = 0; j < self.circles.Length; j++)
+                {
+                    self.circles[j].pos = oldPoses[j];
+                    self.circles[j].lastPos = oldLastPoses[j];
+                }
+            }
+        }
+
+        public void TextPrompt_Draw(On.HUD.TextPrompt.orig_Draw orig, HUD.TextPrompt self, float timeStacker)
+        {
+            orig(self, timeStacker);
+            RoomCamera cam = GetHUDPartCurrentCamera(self);
+            if (cam != null)
+            {
+                var offset = GetGlobalHudOffset(cam);
+                // text
+                if (self.label != null)
+                {
+                    self.label.x += offset.x;
+                    self.label.y += offset.y;
+                }
+                if (self.musicSprite != null)
+                {
+                    self.musicSprite.x += offset.x;
+                    self.musicSprite.y += offset.y;
+                }
+                // background overlay that appears from top and bottom of the screen
+                if (self.sprites != null)
+                {
+                    if (self.sprites[0] != null)
+                        self.sprites[0].y -= offset.y;
+                    if (self.sprites.Length > 1 && self.sprites[1] != null)
+                        self.sprites[1].y += offset.y;
+                }
+                for (int j = 0; j < self.symbols.Count; j++)
+                {
+                    var symbol = self.symbols[j];
+                    if (symbol.symbolSprite != null)
+                    {
+                        self.symbols[j].symbolSprite.x += offset.x;
+                        self.symbols[j].symbolSprite.y += offset.y;
+                    }
+                    if (symbol.shadowSprite1 != null)
+                    {
+                        self.symbols[j].shadowSprite1.x += offset.x;
+                        self.symbols[j].shadowSprite1.y += offset.y;
+                    }
+                    if (symbol.shadowSprite2 != null)
+                    {
+                        self.symbols[j].shadowSprite2.x += offset.x;
+                        self.symbols[j].shadowSprite2.y += offset.y;
+                    }
+                }
+            }
+        }
+
+        public void HypothermiaMeter_Draw(On.MoreSlugcats.HypothermiaMeter.orig_Draw orig, MoreSlugcats.HypothermiaMeter self, float timeStacker)
+        {
+            List<Vector2> oldPoses = new List<Vector2>();
+            List<Vector2> oldLastPoses = new List<Vector2>();
+            RoomCamera cam = GetHUDPartCurrentCamera(self);
+            if (cam != null)
+            {
+                var offset = GetGlobalHudOffset(cam);
+                for (int i = 0; i < self.circles.Length; i++)
+                {
+                    oldPoses.Add(self.circles[i].pos);
+                    oldLastPoses.Add(self.circles[i].lastPos);
+                    self.circles[i].pos += offset;
+                    self.circles[i].lastPos += offset;
+                }
+            }
+            orig(self, timeStacker);
+            if (cam != null)
+            {
+                for (int j = 0; j < self.circles.Length; j++)
+                {
+                    self.circles[j].pos = oldPoses[j];
+                    self.circles[j].lastPos = oldLastPoses[j];
+                }
+            }
+        }
+
+        public void GourmandMeter_Draw(On.MoreSlugcats.GourmandMeter.orig_Draw orig, MoreSlugcats.GourmandMeter self, float timeStacker)
+        {
+            List<Vector2> oldPoses = new List<Vector2>();
+            List<Vector2> oldGoalPoses = new List<Vector2>();
+            RoomCamera cam = GetHUDPartCurrentCamera(self);
+            if (cam != null)
+            {
+                var offset = GetGlobalHudOffset(cam);
+                for (int i = 0; i < self.CollectedSymbols.Count; i++)
+                {
+                    oldPoses.Add(self.CollectedSymbols[i].Pos);
+                    oldGoalPoses.Add(self.CollectedSymbols[i].GoalPos);
+                    self.CollectedSymbols[i].Pos += offset;
+                    self.CollectedSymbols[i].GoalPos += offset;
+                }
+            }
+            orig(self, timeStacker);
+            if (cam != null)
+            {
+                for (int j = 0; j < self.CollectedSymbols.Count; j++)
+                {
+                    self.CollectedSymbols[j].Pos = oldPoses[j];
+                    self.CollectedSymbols[j].GoalPos = oldGoalPoses[j];
+                }
+            }
+        }
+
+        public RoomCamera GetHUDPartCurrentCamera(HUD.HudPart hudPart)
+        {
+            if (curCamera == -1)
+                return null;
+            var loop = hudPart.hud.rainWorld.processManager.currentMainLoop;
+            if (loop is RainWorldGame)
+                return ((RainWorldGame)loop).cameras[curCamera];
+            return null;
         }
 
         public void JollyOffRoom_Update1(ILContext il)
@@ -847,8 +1010,8 @@ namespace SplitScreenCoop
                                 returnValue = false;
                             }
                         }
-                        else if (distanceX > (self.jollyHud.Camera.sSize.x - magicNumber * GetRelativeSplitScreenOffset(self.jollyHud.Camera).x) ||
-                                distanceY > (self.jollyHud.Camera.sSize.y - magicNumber * GetRelativeSplitScreenOffset(self.jollyHud.Camera).y))
+                        else if (distanceX > Math.Abs(self.jollyHud.Camera.sSize.x - magicNumber * GetRelativeSplitScreenOffset(self.jollyHud.Camera).x) ||
+                                distanceY > Math.Abs(self.jollyHud.Camera.sSize.y - magicNumber * GetRelativeSplitScreenOffset(self.jollyHud.Camera).y))
                         {
                             returnValue = false;
                         }
@@ -1003,6 +1166,13 @@ namespace SplitScreenCoop
             OffsetHud(cam);
         }
 
+        public Vector2 GetGlobalHudOffset(RoomCamera camera)
+        {
+            if (!cameraZoomed[camera.cameraNumber])
+                return GetRelativeSplitScreenOffset(camera);
+            return new Vector2(0, 0);
+        }
+
         public Vector2 GetSplitScreenHudOffset(RoomCamera camera, int cameraNumber)
         {
             Vector2 offset = camOffsets[cameraNumber];
@@ -1028,6 +1198,152 @@ namespace SplitScreenCoop
             }
             return offset;
         }
+
+        public static void CustomDecal_ctor(On.CustomDecal.orig_ctor orig, CustomDecal self, PlacedObject placedObject)
+        {
+            orig(self, placedObject);
+            for (int i = 0; i < 4; i++)
+            {
+                self.SetMeshDirty(i, self.meshDirty);
+                self.SetElementDirty(i, self.elementDirty);
+            }
+        }
+		
+        public static void CustomDecal_DrawSprites(On.CustomDecal.orig_DrawSprites orig, CustomDecal self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
+        {
+            int cameraNumber = rCam.cameraNumber;
+            self.meshDirty = self.IsMeshDirty(cameraNumber);
+            self.elementDirty = self.IsElementDirty(cameraNumber);
+
+            orig(self, sLeaser, rCam, timeStacker, camPos);
+
+            self.SetMeshDirty(cameraNumber, self.meshDirty);
+            self.SetElementDirty(cameraNumber, self.elementDirty);
+        }
+
+        public static void CustomDecal_InitiateSprites(On.CustomDecal.orig_InitiateSprites orig, CustomDecal self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam)
+        {
+            orig(self, sLeaser, rCam);
+            self.SetMeshDirty(rCam.cameraNumber, self.meshDirty);
+        }
+
+        public static void CustomDecal_Update(On.CustomDecal.orig_Update orig, CustomDecal self, bool eu)
+        {
+            orig(self, eu);
+            for (int i = 0; i < 4; i++)
+                self.SetMeshDirty(i, self.meshDirty);
+        }
+
+        public static void CustomDecal_UpdateMesh(On.CustomDecal.orig_UpdateMesh orig, CustomDecal self)
+        {
+            orig(self);
+            for (int i = 0; i < 4; i++)
+                self.SetMeshDirty(i, self.meshDirty);
+        }
+
+        public static void CustomDecal_UpdateAsset(On.CustomDecal.orig_UpdateAsset orig, CustomDecal self)
+        {
+            orig(self);
+            for (int i = 0; i < 4; i++)
+                self.SetElementDirty(i, self.meshDirty);
+        }
+
+        public Vector4[] SnowSource_PackSnowData(On.MoreSlugcats.SnowSource.orig_PackSnowData orig, MoreSlugcats.SnowSource self)
+        {
+            Vector2 vector = self.room.cameraPositions[self.room.game.cameras[curCamera].currentCameraPosition];
+            Vector4[] array = new Vector4[3];
+            Vector2 vector2 = RWCustom.Custom.EncodeFloatRG((self.pos.x - vector.x) / 1400f * 0.3f + 0.3f);
+            Vector2 vector3 = RWCustom.Custom.EncodeFloatRG((self.pos.y - vector.y) / 800f * 0.3f + 0.3f);
+            Vector2 vector4 = RWCustom.Custom.EncodeFloatRG(self.rad / 1600f);
+            array[0] = new Vector4(vector2.x, vector2.y, vector3.x, vector3.y);
+            array[1] = new Vector4(vector4.x, vector4.y, self.intensity, self.noisiness);
+            array[2] = new Vector4(0f, 0f, 0f, (float)((int)self.shape) / 5f);
+            return array;
+        }
+
+        public void SnowSource_Update(On.MoreSlugcats.SnowSource.orig_Update orig, MoreSlugcats.SnowSource self, bool eu)
+        {
+            bool camChanged = false;
+            for (int i = 0; i < self.room.game.cameras.Length; i++)
+            {
+                RoomCamera cam = self.room.game.cameras[i];
+                if (cam.room == self.room)
+                {
+                    if (self.GetLastCamPos(i) != cam.currentCameraPosition)
+                    {
+                        camChanged = true;
+                        break;
+                    }
+                }
+            }
+
+            bool flag = false;
+            if (camChanged || self.shape != self.lastShape || self.noisiness != self.lastNoisiness || self.intensity != self.lastIntensity || self.pos != self.lastPos || self.rad != self.lastRad || (self.room.BeingViewed && self.visibility == 2))
+            {
+                flag = true;
+            }
+            if (flag && self.room.snow && self.room.BeingViewed)
+            {
+                int finalVisibility = self.visibility;
+                for (int j = 0; j < self.room.game.cameras.Length; j++)
+                {
+                    RoomCamera cam = self.room.game.cameras[j];
+                    if (cam.room != self.room)
+                        continue;
+                    int vis = self.CheckVisibility(cam.currentCameraPosition);
+                    if (vis != 0)
+                        finalVisibility = vis;
+                    cam.snowChange = true;
+                }
+                self.visibility = finalVisibility;
+            }
+
+            for (int i = 0; i < self.room.game.cameras.Length; i++)
+            {
+                RoomCamera cam = self.room.game.cameras[i];
+                self.SetLastCamPos(cam.cameraNumber, cam.currentCameraPosition);
+            }
+
+            self.lastPos = self.pos;
+            self.lastRad = self.rad;
+            self.lastIntensity = self.intensity;
+            self.lastNoisiness = self.noisiness;
+            self.lastShape = self.shape;
+        }
+
+        public void DustPuff_ApplyPalette(On.RoofTopView.DustpuffSpawner.DustPuff.orig_ApplyPalette orig, RoofTopView.DustpuffSpawner.DustPuff self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, RoomPalette palette)
+        {
+            if (rCam.room.snow)
+            {
+                int camNum = curCamera;
+                if (camNum == -1)
+                {
+                    for (int i = 0; i < rCam.room.game.cameras.Length; i++)
+                    {
+                        RoomCamera cam = rCam.room.game.cameras[i];
+                        if (rCam.room == cam.room)
+                        {
+                            camNum = i;
+                            break;
+                        }
+                    }
+                }
+                Vector2 vector = self.pos - rCam.room.cameraPositions[rCam.room.game.cameras[camNum].currentCameraPosition];
+                sLeaser.sprites[0].color = new Color(vector.x / 1400f, vector.y / 800f, 0f);
+            }
+            else
+                orig(self, sLeaser, rCam, palette);
+        }
+
+        public static void BlizzardGraphics_DrawSprites(On.MoreSlugcats.BlizzardGraphics.orig_DrawSprites orig, MoreSlugcats.BlizzardGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
+        {
+            RoomCamera oldCam = self.rCam;
+            Vector2 vector = rCam.pos;
+            if (rCam.room == self.room)
+                self.rCam = rCam;
+            orig(self, sLeaser, rCam, timeStacker, camPos);
+            self.rCam = oldCam;
+        }
     }
 
     public static class JollyHUDExtension
@@ -1045,6 +1361,51 @@ namespace SplitScreenCoop
         public static RoomCamera SetSplitScreenCamera(this JollyCoop.JollyHUD.JollyPlayerSpecificHud hud, RoomCamera cam)
         {
             return _cwt.GetValue(hud, _cwt => new()).cam = cam;
+        }
+    }
+
+    public static class CustomDecalExtension
+    {
+        public class SplitScreenCustomDecal
+        {
+            public bool[] meshDirty = new bool[4];
+            public bool[] elementDirty = new bool[4];
+        }
+
+        private static readonly ConditionalWeakTable<CustomDecal, SplitScreenCustomDecal> _cwt = new();
+        public static bool IsMeshDirty(this CustomDecal decal, int cameraNumber)
+        {
+            return _cwt.GetValue(decal, _cwt => new()).meshDirty[cameraNumber];
+        }
+        public static bool SetMeshDirty(this CustomDecal decal, int cameraNumber, bool isDirty)
+        {
+            return _cwt.GetValue(decal, _cwt => new()).meshDirty[cameraNumber] = isDirty;
+        }
+        public static bool IsElementDirty(this CustomDecal decal, int cameraNumber)
+        {
+            return _cwt.GetValue(decal, _cwt => new()).elementDirty[cameraNumber];
+        }
+        public static bool SetElementDirty(this CustomDecal decal, int cameraNumber, bool isDirty)
+        {
+            return _cwt.GetValue(decal, _cwt => new()).elementDirty[cameraNumber] = isDirty;
+        }
+    }
+
+    public static class SnowSourceExtension
+    {
+        public class SplitScreenSnowSource
+        {
+            public int[] lastCam = new int[4];
+        }
+
+        private static readonly ConditionalWeakTable<MoreSlugcats.SnowSource, SplitScreenSnowSource> _cwt = new();
+        public static int SetLastCamPos(this MoreSlugcats.SnowSource ss, int cameraNumber, int val)
+        {
+            return _cwt.GetValue(ss, _cwt => new()).lastCam[cameraNumber] = val;
+        }
+        public static int GetLastCamPos(this MoreSlugcats.SnowSource ss, int cameraNumber)
+        {
+            return _cwt.GetValue(ss, _cwt => new()).lastCam[cameraNumber];
         }
     }
 }

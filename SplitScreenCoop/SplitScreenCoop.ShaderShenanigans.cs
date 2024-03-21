@@ -66,55 +66,64 @@ namespace SplitScreenCoop
             }
         }
 
-        public delegate void delSetGlobalColor(string propertyName, Color vec);
-        public void Shader_SetGlobalColor(delSetGlobalColor orig, string propertyName, Color vec)
+        public void RoomCamera_UpdateSnowLight(On.RoomCamera.orig_UpdateSnowLight orig, RoomCamera self)
         {
-            orig(propertyName, vec);
+            if (cameraListeners[self.cameraNumber] is CameraListener l)
+            {
+                l.OnPreRender();
+            }
+            orig(self);
+        }
+
+        public delegate void delSetGlobalColor(int nameID, Color vec);
+        public void Shader_SetGlobalColor(delSetGlobalColor orig, int nameID, Color vec)
+        {
+            orig(nameID, vec);
             if (curCamera >= 0 && cameraListeners[curCamera] is CameraListener l)
             {
-                l.ShaderColors[propertyName] = vec;
+                l.ShaderColors[nameID] = vec;
             }
-            else if ((propertyName == "_mapCol" || propertyName == "_MapWaterCol") && !(rainworldGameObject.processManager?.currentMainLoop is RainWorldGame game))
+            else if ((nameID == RainWorld.ShadPropMapCol || nameID == RainWorld.ShadPropMapWaterCol) && !(rainworldGameObject.processManager?.currentMainLoop is RainWorldGame game))
             {
-                cameraListeners[0].ShaderColors[propertyName] = vec;
+                cameraListeners[0].ShaderColors[nameID] = vec;
             }
         }
 
-        public delegate void delSetGlobalVector(string propertyName, Vector4 vec);
-        public void Shader_SetGlobalVector(delSetGlobalVector orig, string propertyName, Vector4 vec)
+        public delegate void delSetGlobalVector(int nameID, Vector4 vec);
+        public void Shader_SetGlobalVector(delSetGlobalVector orig, int nameID, Vector4 vec)
         {
-            orig(propertyName, vec);
+            orig(nameID, vec);
             if (curCamera >= 0 && cameraListeners[curCamera] is CameraListener l)
             {
-                l.ShaderVectors[propertyName] = vec;
+                l.ShaderVectors[nameID] = vec;
             }
-            else if (propertyName == "_mapPan" && !(rainworldGameObject.processManager?.currentMainLoop is RainWorldGame game))
+            else if (nameID == RainWorld.ShadPropMapPan && !(rainworldGameObject.processManager?.currentMainLoop is RainWorldGame game))
             {
-                cameraListeners[0].ShaderVectors[propertyName] = vec;
+                cameraListeners[0].ShaderVectors[nameID] = vec;
             }
         }
 
-        public delegate void delSetGlobalFloat(string propertyName, float f);
-        public void Shader_SetGlobalFloat(delSetGlobalFloat orig, string propertyName, float f)
+        public delegate void delSetGlobalFloat(int nameID, float f);
+        public void Shader_SetGlobalFloat(delSetGlobalFloat orig, int nameID, float f)
         {
-            orig(propertyName, f);
-            if (curCamera >= 0 && cameraListeners[curCamera] is CameraListener l)
+            orig(nameID, f);
+            if (curCamera >= 0 && cameraListeners[curCamera] is CameraListener l && (nameID != RainWorld.ShadPropRain))
             {
-                l.ShaderFloats[propertyName] = f;
+                l.ShaderFloats[nameID] = f;
             }
         }
 
-        public delegate void delSetGlobalTexture(string propertyName, Texture t);
-        public void Shader_SetGlobalTexture(delSetGlobalTexture orig, string propertyName, Texture t)
+        public delegate void delSetGlobalTexture(int nameID, Texture t);
+        public void Shader_SetGlobalTexture(delSetGlobalTexture orig, int nameID, Texture t)
         {
-            orig(propertyName, t);
+            orig(nameID, t);
             if (curCamera >= 0 && cameraListeners[curCamera] is CameraListener l)
             {
-                l.ShaderTextures[propertyName] = t;
+                l.ShaderTextures[nameID] = t;
             }
-            else if (propertyName == "_mapFogTexture" && !(rainworldGameObject.processManager?.currentMainLoop is RainWorldGame game))
+            else if (nameID == RainWorld.ShadPropMapFogTexture && !(rainworldGameObject.processManager?.currentMainLoop is RainWorldGame game))
             {
-                cameraListeners[0].ShaderTextures[propertyName] = t;
+                cameraListeners[0].ShaderTextures[nameID] = t;
             }
         }
     }
