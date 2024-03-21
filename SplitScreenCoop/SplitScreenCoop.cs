@@ -19,7 +19,7 @@ using System.Runtime.CompilerServices;
 
 namespace SplitScreenCoop
 {
-    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.14")]
+    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.15")]
     public partial class SplitScreenCoop : BaseUnityPlugin
     {
         public static SplitScreenCoopOptions Options;
@@ -209,13 +209,13 @@ namespace SplitScreenCoop
 
                 // unity hooks
                 // set shader variables into a dict so it can be set per-camera
-                new Hook(typeof(Shader).GetMethod("SetGlobalColor", new Type[] { typeof(string), typeof(Color) }),
+                new Hook(typeof(Shader).GetMethod("SetGlobalColor", new Type[] { typeof(int), typeof(Color) }),
                     typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalColor"), this);
-                new Hook(typeof(Shader).GetMethod("SetGlobalVector", new Type[] { typeof(string), typeof(Vector4) }),
+                new Hook(typeof(Shader).GetMethod("SetGlobalVector", new Type[] { typeof(int), typeof(Vector4) }),
                     typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalVector"), this);
-                new Hook(typeof(Shader).GetMethod("SetGlobalFloat", new Type[] { typeof(string), typeof(float) }),
+                new Hook(typeof(Shader).GetMethod("SetGlobalFloat", new Type[] { typeof(int), typeof(float) }),
                     typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalFloat"), this);
-                new Hook(typeof(Shader).GetMethod("SetGlobalTexture", new Type[] { typeof(string), typeof(Texture) }),
+                new Hook(typeof(Shader).GetMethod("SetGlobalTexture", new Type[] { typeof(int), typeof(Texture) }),
                     typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalTexture"), this);
 
                 Logger.LogInfo("OnModsInit done");

@@ -21,10 +21,10 @@ namespace SplitScreenCoop
             public Display display;
             public RenderTexture renderTexture;
             public RenderTexture tempTex;
-            public Dictionary<string, Color> ShaderColors = new Dictionary<string, Color>();
-            public Dictionary<string, Vector4> ShaderVectors = new Dictionary<string, Vector4>();
-            public Dictionary<string, float> ShaderFloats = new Dictionary<string, float>();
-            public Dictionary<string, Texture> ShaderTextures = new Dictionary<string, Texture>();
+            public Dictionary<int, Color> ShaderColors = new Dictionary<int, Color>();
+            public Dictionary<int, Vector4> ShaderVectors = new Dictionary<int, Vector4>();
+            public Dictionary<int, float> ShaderFloats = new Dictionary<int, float>();
+            public Dictionary<int, Texture> ShaderTextures = new Dictionary<int, Texture>();
             public Rect sourceRect;
             public Rect targetRect;
             public int srcX;
