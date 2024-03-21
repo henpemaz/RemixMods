@@ -171,6 +171,7 @@ namespace SplitScreenCoop
                 On.Player.TriggerCameraSwitch += Player_TriggerCameraSwitch1;
                 On.Player.JollyInputUpdate += Player_JollyInputUpdate;
                 On.MoreSlugcats.HypothermiaMeter.Draw += HypothermiaMeter_Draw;
+                On.MoreSlugcats.GourmandMeter.Draw += GourmandMeter_Draw;
 
                 On.Player.ctor += Player_ctor;
                 IL.HUD.HUD.InitSinglePlayerHud += InitSinglePlayerHud;
@@ -879,6 +880,33 @@ namespace SplitScreenCoop
                 {
                     self.circles[j].pos = oldPoses[j];
                     self.circles[j].lastPos = oldLastPoses[j];
+                }
+            }
+        }
+
+        public void GourmandMeter_Draw(On.MoreSlugcats.GourmandMeter.orig_Draw orig, MoreSlugcats.GourmandMeter self, float timeStacker)
+        {
+            List<Vector2> oldPoses = new List<Vector2>();
+            List<Vector2> oldGoalPoses = new List<Vector2>();
+            RoomCamera cam = GetHUDPartCurrentCamera(self);
+            if (cam != null)
+            {
+                var offset = GetGlobalHudOffset(cam);
+                for (int i = 0; i < self.CollectedSymbols.Count; i++)
+                {
+                    oldPoses.Add(self.CollectedSymbols[i].Pos);
+                    oldGoalPoses.Add(self.CollectedSymbols[i].GoalPos);
+                    self.CollectedSymbols[i].Pos += offset;
+                    self.CollectedSymbols[i].GoalPos += offset;
+                }
+            }
+            orig(self, timeStacker);
+            if (cam != null)
+            {
+                for (int j = 0; j < self.CollectedSymbols.Count; j++)
+                {
+                    self.CollectedSymbols[j].Pos = oldPoses[j];
+                    self.CollectedSymbols[j].GoalPos = oldGoalPoses[j];
                 }
             }
         }
