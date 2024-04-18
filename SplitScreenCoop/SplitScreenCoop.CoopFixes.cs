@@ -5,6 +5,7 @@ using MonoMod.Cil;
 using Mono.Cecil.Cil;
 using HUD;
 using System.Collections.Generic;
+using CoopLeash;
 
 namespace SplitScreenCoop
 {
@@ -190,6 +191,10 @@ namespace SplitScreenCoop
                 {
                     var wasrc = rc;
                     rc = self.abstractCreature.world.game.cameras.FirstOrDefault(c => c.followAbstractCreature == self.abstractCreature);
+
+                    if (stickTogetherEnabled)
+                        rc = StickTogetherCameraPriority(self);
+
                     if (rc == null) rc = self.abstractCreature.world.game.cameras.FirstOrDefault(c => IsCreatureDead(c.followAbstractCreature));
                     if (rc == null) rc = self.abstractCreature.world.game.cameras.FirstOrDefault(c => c.cameraNumber == self.playerState.playerNumber);
                     if (rc == null) rc = wasrc;
@@ -201,6 +206,17 @@ namespace SplitScreenCoop
                 Logger.LogError(e);
                 throw;
             }
+        }
+
+        private RoomCamera StickTogetherCameraPriority(Player self)
+        {
+            RoomCamera result = null; // self.abstractCreature.world.game.cameras.FirstOrDefault(c => c.followAbstractCreature == self.abstractCreature);
+            if (self.GetCat().defector)
+                result = self.abstractCreature.world.game.cameras[1];
+            else
+                result = self.abstractCreature.world.game.cameras[0];
+
+            return result;
         }
 
         private void Player_TriggerCameraSwitch1(On.Player.orig_TriggerCameraSwitch orig, Player self)

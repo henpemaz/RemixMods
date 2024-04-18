@@ -66,6 +66,7 @@ namespace SplitScreenCoop
         public static bool alwaysSplit;
         public static bool allowCameraSwapping;
         public static bool dualDisplays;
+        public static bool stickTogetherEnabled;
 
         public static Camera[] fcameras = new Camera[4];
         public static CameraListener[] cameraListeners = new CameraListener[4];
@@ -113,6 +114,14 @@ namespace SplitScreenCoop
                 // Register OptionsInterface
                 Options ??= new SplitScreenCoopOptions();
                 MachineConnector.SetRegisteredOI("henpemaz_splitscreencoop", Options);
+
+                //CHECK IF SPECIFIC MODS ARE ENABLED
+                for (int i = 0; i < ModManager.ActiveMods.Count; i++)
+                {
+                    if (ModManager.ActiveMods[i].id == "WillowWisp.CoopLeash")
+                        stickTogetherEnabled = true;
+                }
+                
 
                 if (init) return;
                 init = true;
