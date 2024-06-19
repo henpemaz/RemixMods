@@ -45,6 +45,7 @@ namespace SplitScreenCoop
             {
                 curCamera = self.cameraNumber;
                 orig(self, timeStacker, timeSpeed);
+                OffsetHud(self);
             }
             finally
             {

@@ -133,7 +133,6 @@ namespace SplitScreenCoop
         public void RoomCamera_FireUpSinglePlayerHUD(On.RoomCamera.orig_FireUpSinglePlayerHUD orig, RoomCamera self, Player player)
         {
             orig(self, player);
-            OffsetHud(self);
             AssignCameraToPlayer(self, player);
         }
 

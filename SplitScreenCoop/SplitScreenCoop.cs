@@ -19,7 +19,7 @@ using System.Runtime.CompilerServices;
 
 namespace SplitScreenCoop
 {
-    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.16")]
+    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.17")]
     public partial class SplitScreenCoop : BaseUnityPlugin
     {
         public static SplitScreenCoopOptions Options;
@@ -604,8 +604,6 @@ namespace SplitScreenCoop
             {
                 Logger.LogInfo("multicam");
                 CurrentSplitMode = split;
-                for(int i = 0; i < game.cameras.Length; i++)
-                    OffsetHud(game.cameras[i]);
 
                 if (dualDisplays)
                 {
@@ -1172,7 +1170,6 @@ namespace SplitScreenCoop
             {
                 cameraListeners[camNum].SetMap(cameraSourcePositions[camNum], cameraTargetPositions[camNum]);
             }
-            OffsetHud(cam);
         }
 
         public Vector2 GetGlobalHudOffset(RoomCamera camera)
