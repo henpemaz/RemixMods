@@ -54,6 +54,11 @@ namespace SplitScreenCoop
                     inpause = true;
                     try
                     {
+                        for (int i = 0; i < game.cameras.Count(); i++)
+                        {
+                            oldCameraZoom[i] = cameraZoomed[i];
+                            SetCameraZoom(game.cameras[i], false);
+                        }
                         var otherpause = new Menu.PauseMenu(manager, game);
                         otherpause.container.SetPosition(camOffsets[game.cameras[1].cameraNumber] + new Vector2(-manager.rainWorld.screenSize.x / 4f, 0));
                         manager.sideProcesses.Add(otherpause);
@@ -69,6 +74,11 @@ namespace SplitScreenCoop
                     inpause = true;
                     try
                     {
+                        for (int i = 0; i < game.cameras.Count(); i++)
+                        {
+                            oldCameraZoom[i] = cameraZoomed[i];
+                            SetCameraZoom(game.cameras[i], false);
+                        }
                         var otherpause = new Menu.PauseMenu(manager, game);
                         otherpause.container.SetPosition(camOffsets[game.cameras[1].cameraNumber] + new Vector2(0, manager.rainWorld.screenSize.y / 4f));
                         manager.sideProcesses.Add(otherpause);
@@ -116,7 +126,7 @@ namespace SplitScreenCoop
         public void PauseMenu_ShutDownProcess(On.Menu.PauseMenu.orig_ShutDownProcess orig, Menu.PauseMenu self)
         {
             orig(self);
-            if (CurrentSplitMode == SplitMode.Split4Screen)
+            if (CurrentSplitMode != SplitMode.NoSplit)
             {
                 for (int i = 0; i < self.game.cameras.Count(); i++)
                 {
