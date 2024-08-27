@@ -19,7 +19,7 @@ using System.Runtime.CompilerServices;
 
 namespace SplitScreenCoop
 {
-    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.17")]
+    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.18")]
     public partial class SplitScreenCoop : BaseUnityPlugin
     {
         public static SplitScreenCoopOptions Options;
@@ -230,8 +230,14 @@ namespace SplitScreenCoop
                     typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalColor"), this);
                 new Hook(typeof(Shader).GetMethod("SetGlobalVector", new Type[] { typeof(int), typeof(Vector4) }),
                     typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalVector"), this);
+                new Hook(typeof(Shader).GetMethod("SetGlobalVectorArray", new Type[] { typeof(int), typeof(Vector4[]) }),
+                    typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalVectorArrayArray"), this);
+                new Hook(typeof(Shader).GetMethod("SetGlobalVectorArray", new Type[] { typeof(int), typeof(List<Vector4>) }),
+                    typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalVectorArrayList"), this);
                 new Hook(typeof(Shader).GetMethod("SetGlobalFloat", new Type[] { typeof(int), typeof(float) }),
                     typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalFloat"), this);
+                new Hook(typeof(Shader).GetMethod("SetGlobalInt", new Type[] { typeof(int), typeof(int) }),
+                    typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalInt"), this);
                 new Hook(typeof(Shader).GetMethod("SetGlobalTexture", new Type[] { typeof(int), typeof(Texture) }),
                     typeof(SplitScreenCoop).GetMethod("Shader_SetGlobalTexture"), this);
 

@@ -1,4 +1,5 @@
 ﻿
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace SplitScreenCoop
@@ -90,6 +91,25 @@ namespace SplitScreenCoop
             }
         }
 
+        public delegate void delSetGlobalVectorArrayArray(int nameID, Vector4[] values);
+        public void Shader_SetGlobalVectorArrayArray(delSetGlobalVectorArrayArray orig, int nameID, Vector4[] values)
+        {
+            orig(nameID, values);
+            if (curCamera >= 0 && cameraListeners[curCamera] is CameraListener l)
+            {
+                l.ShaderVectorArrays[nameID] = values;
+            }
+        }
+        public delegate void delSetGlobalVectorArrayList(int nameID, List<Vector4> values);
+        public void Shader_SetGlobalVectorArrayList(delSetGlobalVectorArrayList orig, int nameID, List<Vector4> values)
+        {
+            orig(nameID, values);
+            if (curCamera >= 0 && cameraListeners[curCamera] is CameraListener l)
+            {
+                l.ShaderVectorLists[nameID] = values;
+            }
+        }
+
         public delegate void delSetGlobalVector(int nameID, Vector4 vec);
         public void Shader_SetGlobalVector(delSetGlobalVector orig, int nameID, Vector4 vec)
         {
@@ -111,6 +131,16 @@ namespace SplitScreenCoop
             if (curCamera >= 0 && cameraListeners[curCamera] is CameraListener l && (nameID != RainWorld.ShadPropRain))
             {
                 l.ShaderFloats[nameID] = f;
+            }
+        }
+
+        public delegate void delSetGlobalInt(int nameID, int i);
+        public void Shader_SetGlobalInt(delSetGlobalInt orig, int nameID, int i)
+        {
+            orig(nameID, i);
+            if (curCamera >= 0 && cameraListeners[curCamera] is CameraListener l)
+            {
+                l.ShaderFloats[nameID] = i; // underlying handler is the same
             }
         }
 

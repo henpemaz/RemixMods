@@ -23,6 +23,8 @@ namespace SplitScreenCoop
             public RenderTexture tempTex;
             public Dictionary<int, Color> ShaderColors = new Dictionary<int, Color>();
             public Dictionary<int, Vector4> ShaderVectors = new Dictionary<int, Vector4>();
+            public Dictionary<int, Vector4[]> ShaderVectorArrays = new Dictionary<int, Vector4[]>();
+            public Dictionary<int, List<Vector4>> ShaderVectorLists = new Dictionary<int, List<Vector4>>();
             public Dictionary<int, float> ShaderFloats = new Dictionary<int, float>();
             public Dictionary<int, Texture> ShaderTextures = new Dictionary<int, Texture>();
             public Rect sourceRect;
@@ -122,6 +124,10 @@ namespace SplitScreenCoop
                     Shader.SetGlobalColor(kv.Key, kv.Value);
                 foreach (var kv in ShaderVectors.ToArray())
                     Shader.SetGlobalVector(kv.Key, kv.Value);
+                foreach (var kv in ShaderVectorArrays.ToArray())
+                    Shader.SetGlobalVectorArray(kv.Key, kv.Value);
+                foreach (var kv in ShaderVectorLists.ToArray())
+                    Shader.SetGlobalVectorArray(kv.Key, kv.Value);
                 foreach (var kv in ShaderFloats.ToArray())
                     Shader.SetGlobalFloat(kv.Key, kv.Value);
                 foreach (var kv in ShaderTextures.ToArray())
