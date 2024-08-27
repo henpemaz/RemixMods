@@ -221,7 +221,7 @@ namespace SplitScreenCoop
 
         private void Player_TriggerCameraSwitch1(On.Player.orig_TriggerCameraSwitch orig, Player self)
         {
-            if (CurrentSplitMode == SplitMode.Split4Screen && self.abstractCreature.world.game.cameras.Length > self.playerState.playerNumber)
+            if (CurrentSplitMode != SplitMode.NoSplit && self.abstractCreature.world.game.cameras.Length > self.playerState.playerNumber)
                 ToggleCameraZoom(self.abstractCreature.world.game.cameras[self.playerState.playerNumber]);
             orig(self);
         }
