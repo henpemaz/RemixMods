@@ -5,7 +5,7 @@ namespace LapMod
 {
     public class LapModRemix : OptionInterface
     {
-
+        
         public static LapModRemix instance = new LapModRemix();
 
         public static Configurable<KeyCode> roomPassthroughKey = instance.config.Bind("roomPassthroughKey", KeyCode.U, new ConfigurableInfo(

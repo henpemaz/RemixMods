@@ -4,7 +4,11 @@ using System.Security;
 using System.Security.Permissions;
 using BepInEx;
 using BepInEx.Logging;
+using IL.RWCustom;
 using UnityEngine;
+
+
+// TODO: DISTINGUISH EXITING A REGULAR SHORTCUT AND AN EXITING SHORTCUT
 
 [module: UnverifiableCode]
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -21,9 +25,9 @@ namespace LapMod
             Logger.LogInfo("OnEnable");
             On.RainWorld.OnModsInit += OnModsInit;
             On.RainWorld.PostModsInit += RainWorld_PostModsInit;
-            On.Player.Update += PlayerUpdateHook;
             sLogger = Logger;
         }
+
 
         public bool init;
         private static ManualLogSource sLogger;
@@ -31,18 +35,6 @@ namespace LapMod
         public static void Debug(object data)
         {
             sLogger.LogInfo(data);
-        }
-
-        static TimeSpan totalTimeTracker;
-        static String time;
-
-        public void PlayerUpdateHook(On.Player.orig_Update orig, Player self, bool eu)
-        {
-            MoreSlugcats.SpeedRunTimer.CampaignTimeTracker timeTracker = MoreSlugcats.SpeedRunTimer.GetCampaignTimeTracker(self.abstractCreature.world.game.GetStorySession.saveStateNumber);
-            totalTimeTracker = timeTracker.TotalFreeTimeSpan;
-            time = totalTimeTracker.ToString("mm':'ss':'fff");
-
-            orig(self, eu);
         }
 
         public void OnModsInit(On.RainWorld.orig_OnModsInit orig, RainWorld self)
@@ -53,6 +45,8 @@ namespace LapMod
                 init = true;
                 Logger.LogInfo("OnModsInit");
                 On.ShortcutHandler.Update += ShortcutHandler_Update;
+                On.Player.Update += PlayerUpdateHook;
+                On.Player.SpitOutOfShortCut += SpitOutOfShortCutHook;
                 On.RainWorldGame.RawUpdate += RainWorldGame_RawUpdate;
                 On.RoomCamera.ctor += RoomCamera_ctor;
                 On.RoomCamera.ClearAllSprites += RoomCamera_ClearAllSprites;
@@ -106,29 +100,65 @@ namespace LapMod
             Panel.Update();
         }
 
+
+        private Player player;
+
+        static TimeSpan totalTimeTracker;
+        static String timeString;
+
         static int wantsNextRoomCounter = 0;
         public static bool wantsNextRoom = false;
+
         static int enteredFromNode = -1;
         static int timerWhenEntered = 0;
-        static TimeSpan time1;
-        static TimeSpan time2;
-        public static TimeSpan timeDiff;
+
+
+        public void PlayerUpdateHook(On.Player.orig_Update orig, Player self, bool eu)
+        {
+            player = self;
+            orig(self, eu);
+        }
 
         private void RainWorldGame_RawUpdate(On.RainWorldGame.orig_RawUpdate orig, RainWorldGame self, float dt)
         {
+            if (player != null)
+            {
+                MoreSlugcats.SpeedRunTimer.CampaignTimeTracker timeTracker = MoreSlugcats.SpeedRunTimer.GetCampaignTimeTracker(player.abstractCreature.world.game.GetStorySession.saveStateNumber);
+                totalTimeTracker = timeTracker.TotalFreeTimeSpan;
+                timeString = totalTimeTracker.ToString("mm'm:'ss's:'fff'ms'");
+            }
+
             KeyCode passthroughKey = LapModRemix.roomPassthroughKey.Value;
             orig(self, dt);
             if (Input.GetKey(passthroughKey) && wantsNextRoomCounter == 0)
             {
                 wantsNextRoom = !wantsNextRoom;
                 wantsNextRoomCounter = 60;
-                Debug("Player wants next room: " + wantsNextRoom.ToString());
+                Debug("Lap Mod: Player wants next room set to " + wantsNextRoom.ToString());
             }
             else if (wantsNextRoomCounter > 0)
             {
                 wantsNextRoomCounter--;
             }
         }
+
+
+        static TimeSpan time1;
+        static TimeSpan time2;
+        public static TimeSpan timeDiff;
+        static bool isNewRoom = false;
+
+        private void SpitOutOfShortCutHook(On.Player.orig_SpitOutOfShortCut orig, Player self, RWCustom.IntVector2 pos, Room newRoom, bool spitOutAllSticks)
+        {
+            if (isNewRoom)
+            {
+                Debug("Lap Mod: Entering room at " + timeString);
+                time1 = totalTimeTracker;
+            }
+            isNewRoom = false;
+            orig(self, pos, newRoom, spitOutAllSticks);
+        }
+
 
         static void ShortcutHandler_Update(On.ShortcutHandler.orig_Update orig, ShortcutHandler self)
         {
@@ -148,25 +178,13 @@ namespace LapMod
                             {
                                 //Debug.Log("about to exit");
                                 // Looping back
-                                if (time1 == null)
-                                {
-                                    time1 = totalTimeTracker;
-                                }
-                                else if (time1 != null && time2 == null)
-                                {
-                                    time2 = totalTimeTracker;
-                                    timeDiff = time2.Subtract(time1);
-                                }
-                                else 
-                                {
-                                    time1 = time2;
-                                    time2 = totalTimeTracker;
-                                    timeDiff = time2.Subtract(time1);
-                                }
-                                Debug("LapMod: Exiting room at: " + time);
+                                isNewRoom = true;
+                                time2 = totalTimeTracker;
+                                timeDiff = time2.Subtract(time1);
+                                Debug("LapMod: Exiting room at: " + timeString);
                                 if (timeDiff != null)
                                 {
-                                    Debug("Total room time: " + timeDiff.ToString("mm':'ss':'fff"));
+                                    Debug("Lap Mod: Total room time " + timeDiff.ToString("mm'm:'ss's:'fff'ms'"));
                                 }
 
                                 int num = Array.IndexOf<RWCustom.IntVector2>(realizedRoom.exitAndDenIndex, pos);
@@ -179,7 +197,7 @@ namespace LapMod
                                     self.transportVessels[i].pos = pos;
 
                                     self.transportVessels[i].creature.abstractCreature.pos.abstractNode = num;
-                                    Debug("LapMod: redirecting vessel at " + time);
+                                    Debug("LapMod: redirecting vessel at " + timeString);
                                     if (self.transportVessels[i].room.connections.Length > 0)
                                     {
                                         if (num >= self.transportVessels[i].room.connections.Length)
@@ -190,7 +208,6 @@ namespace LapMod
                                         }
                                         else
                                         {
-                                            Debug("LapMod: re-entering room at " + time);
                                             int num2 = self.transportVessels[i].room.connections[num];
                                             if (num2 <= -1)
                                             {
@@ -206,7 +223,6 @@ namespace LapMod
                                 }
                                 else // About to enter new room, store info
                                 {
-                                    Debug("LapMod: entering new room at " + time);
                                     if (num < self.transportVessels[i].room.connections.Length)
                                     {
                                         int num2 = self.transportVessels[i].room.connections[num];
