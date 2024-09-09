@@ -7,7 +7,7 @@ namespace LapMod
         private static readonly Color textColor = Color.white;
         private const float baseTextAlpha = 0.3f;
         private const float highlightTextAlpha = 0.9f;
-        private const float alphaInc = 0.005f;
+        private const float alphaInc = 0.0075f;
 
         private static FLabel passthroughBool;
         private static FLabel roomTime;
@@ -18,7 +18,7 @@ namespace LapMod
         private static Vector2 roomTimeOffset = new Vector2(0f, 20f);
 
         private static int highAlphaCounter = 0;
-        private static int highAlphaCounterMax = 240;
+        private static int highAlphaCounterMax = 80; // 2 seconds
 
         public static void Initialize()
         {

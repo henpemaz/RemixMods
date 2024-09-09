@@ -4,11 +4,8 @@ using System.Security;
 using System.Security.Permissions;
 using BepInEx;
 using BepInEx.Logging;
-using IL.RWCustom;
 using UnityEngine;
 
-
-// TODO: DISTINGUISH EXITING A REGULAR SHORTCUT AND AN EXITING SHORTCUT
 
 [module: UnverifiableCode]
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -47,10 +44,9 @@ namespace LapMod
                 On.ShortcutHandler.Update += ShortcutHandler_Update;
                 On.Player.Update += PlayerUpdateHook;
                 On.Player.SpitOutOfShortCut += SpitOutOfShortCutHook;
-                On.RainWorldGame.RawUpdate += RainWorldGame_RawUpdate;
+                On.RainWorldGame.Update += RainWorldGame_UpdateHook;
                 On.RoomCamera.ctor += RoomCamera_ctor;
                 On.RoomCamera.ClearAllSprites += RoomCamera_ClearAllSprites;
-                On.RainWorldGame.GrafUpdate += RainWorldGame_GrafUpdate;
                 Logger.LogInfo("OnModsInit done");
             }
             catch (Exception e)
@@ -93,13 +89,6 @@ namespace LapMod
             orig(self);
         }
 
-        private static void RainWorldGame_GrafUpdate(On.RainWorldGame.orig_GrafUpdate orig, RainWorldGame self,
-            float timeStacker)
-        {
-            orig(self, timeStacker);
-            Panel.Update();
-        }
-
 
         private Player player;
 
@@ -119,8 +108,9 @@ namespace LapMod
             orig(self, eu);
         }
 
-        private void RainWorldGame_RawUpdate(On.RainWorldGame.orig_RawUpdate orig, RainWorldGame self, float dt)
+        private void RainWorldGame_UpdateHook(On.RainWorldGame.orig_Update orig, RainWorldGame self)
         {
+            Panel.Update();
             if (player != null)
             {
                 MoreSlugcats.SpeedRunTimer.CampaignTimeTracker timeTracker = MoreSlugcats.SpeedRunTimer.GetCampaignTimeTracker(player.abstractCreature.world.game.GetStorySession.saveStateNumber);
@@ -129,11 +119,11 @@ namespace LapMod
             }
 
             KeyCode passthroughKey = LapModRemix.roomPassthroughKey.Value;
-            orig(self, dt);
+            orig(self);
             if (Input.GetKey(passthroughKey) && wantsNextRoomCounter == 0)
             {
                 wantsNextRoom = !wantsNextRoom;
-                wantsNextRoomCounter = 60;
+                wantsNextRoomCounter = 12;
                 Debug("Lap Mod: Player wants next room set to " + wantsNextRoom.ToString());
             }
             else if (wantsNextRoomCounter > 0)
