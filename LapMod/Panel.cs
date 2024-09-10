@@ -14,7 +14,7 @@ namespace LapMod
         private static FContainer container;
         private static string timeDiffString;
 
-        private static Vector2 panelAnchor = new Vector2(50f, 690f);
+        private static Vector2 panelAnchor = new Vector2(50f + 0.01f, 690f + 0.01f); // Characters are cut off on a 1440p monitor for some reason, unless I add +0.01f :(
         private static Vector2 roomTimeOffset = new Vector2(0f, 20f);
 
         private static int highAlphaCounter = 0;
@@ -37,7 +37,7 @@ namespace LapMod
             };
             container.AddChild(roomTime);
 
-            passthroughBool = new FLabel(RWCustom.Custom.GetFont(), $"Passthrough: {LapMod.wantsNextRoom.ToString()}")
+            passthroughBool = new FLabel(RWCustom.Custom.GetFont(), $"Looping: {(!LapMod.wantsNextRoom).ToString()}")
             {
                 isVisible = true,
                 alpha = baseTextAlpha,
@@ -52,7 +52,7 @@ namespace LapMod
 
         public static void Update()
         {
-            passthroughBool.text = $"Passthrough: {LapMod.wantsNextRoom.ToString()}";
+            passthroughBool.text = $"Looping: {(!LapMod.wantsNextRoom).ToString()}";
             passthroughBool.SetPosition(panelAnchor);
             CheckTimeDiff();
             if (highAlphaCounter > highAlphaCounterMax/2) 

@@ -76,11 +76,19 @@ namespace LapMod
             }
         }
 
+        static TimeSpan defaultTime;
+
         private static void RoomCamera_ctor(On.RoomCamera.orig_ctor orig, RoomCamera self, RainWorldGame game,
             int cameraNumber)
         {
             orig(self, game, cameraNumber);
-            Panel.Initialize();
+            if(!game.IsArenaSession)
+            {
+                Panel.Initialize();
+                time1 = defaultTime;
+                time2 = defaultTime;
+                timeDiff = defaultTime;
+            }
         }
 
         private static void RoomCamera_ClearAllSprites(On.RoomCamera.orig_ClearAllSprites orig, RoomCamera self)
@@ -110,26 +118,30 @@ namespace LapMod
 
         private void RainWorldGame_UpdateHook(On.RainWorldGame.orig_Update orig, RainWorldGame self)
         {
-            Panel.Update();
-            if (player != null)
+            if(!self.IsArenaSession)
             {
-                MoreSlugcats.SpeedRunTimer.CampaignTimeTracker timeTracker = MoreSlugcats.SpeedRunTimer.GetCampaignTimeTracker(player.abstractCreature.world.game.GetStorySession.saveStateNumber);
-                totalTimeTracker = timeTracker.TotalFreeTimeSpan;
-                timeString = totalTimeTracker.ToString("mm'm:'ss's:'fff'ms'");
-            }
+                Panel.Update();
+                if (player != null)
+                {
+                    MoreSlugcats.SpeedRunTimer.CampaignTimeTracker timeTracker = MoreSlugcats.SpeedRunTimer.GetCampaignTimeTracker(player.abstractCreature.world.game.GetStorySession.saveStateNumber);
+                    totalTimeTracker = timeTracker.TotalFreeTimeSpan;
+                    timeString = totalTimeTracker.ToString("mm'm:'ss's:'fff'ms'");
+                }
 
-            KeyCode passthroughKey = LapModRemix.roomPassthroughKey.Value;
+                KeyCode passthroughKey = LapModRemix.roomPassthroughKey.Value;
+                if (Input.GetKey(passthroughKey) && wantsNextRoomCounter == 0)
+                {
+                    wantsNextRoom = !wantsNextRoom;
+                    wantsNextRoomCounter = 12;
+                    Debug("Lap Mod: Player wants next room set to " + wantsNextRoom.ToString());
+                }
+                else if (wantsNextRoomCounter > 0)
+                {
+                    wantsNextRoomCounter--;
+                }
+            }
             orig(self);
-            if (Input.GetKey(passthroughKey) && wantsNextRoomCounter == 0)
-            {
-                wantsNextRoom = !wantsNextRoom;
-                wantsNextRoomCounter = 12;
-                Debug("Lap Mod: Player wants next room set to " + wantsNextRoom.ToString());
-            }
-            else if (wantsNextRoomCounter > 0)
-            {
-                wantsNextRoomCounter--;
-            }
+
         }
 
 
