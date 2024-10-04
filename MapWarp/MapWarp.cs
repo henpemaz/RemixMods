@@ -1,6 +1,7 @@
 ﻿using BepInEx;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Security;
 using System.Security.Permissions;
 using UnityEngine;
@@ -382,9 +383,10 @@ namespace MapWarp
         {
             if (room.offScreenDen) return; // no can do, player shouldnt ever never abstractize or they lose their tummy contents
             if (room.realizedRoom == null) room.world.ActivateRoom(room); // prevent non-camera-followed players from abstractizing
-            foreach (var p in room.world.game.Players)
+            List<AbstractCreature> teleported = new List<AbstractCreature>(4);
+            foreach (var p in room.world.game.Players.Concat(room.world.game.cameras.Select(c => c.followAbstractCreature).Where(e => e != null)))
             {
-                if (p.realizedCreature != null)
+                if (p.realizedCreature != null && !teleported.Contains(p))
                 {
                     if (p.realizedCreature.inShortcut) // remove from pipe, aalready removed from room.
                     {
@@ -392,6 +394,11 @@ namespace MapWarp
                         var vessel = RemoveFromVessels(room.world.game.shortcuts, p.realizedCreature);
                         if(vessel == null) room.world.game.shortcuts.CreatureTeleportOutOfRoom(p.realizedCreature, new WorldCoordinate(), dest);// vessels removed during region-switching, start position lost
                         else room.world.game.shortcuts.CreatureTeleportOutOfRoom(p.realizedCreature, new WorldCoordinate() { room=vessel.room.index, abstractNode=vessel.entranceNode }, dest);
+                        List<AbstractPhysicalObject> allConnectedObjects = p.GetAllConnectedObjects(); // includes self
+                        for (int i = 0; i < allConnectedObjects.Count; i++)
+                        {
+                            if (allConnectedObjects[i] is AbstractCreature ac) teleported.Add(ac);
+                        }
                     }
                     else if (p.realizedCreature.room != null)
                     {
@@ -400,7 +407,7 @@ namespace MapWarp
                         // cleans out connected objects *and self* from room.
                         Room realizedRoom = p.realizedCreature.room;
                         WorldCoordinate origin = p.pos;
-                        List<AbstractPhysicalObject> allConnectedObjects = p.GetAllConnectedObjects(); // The catch: includes self
+                        List<AbstractPhysicalObject> allConnectedObjects = p.GetAllConnectedObjects(); // includes self
                         for (int i = 0; i < allConnectedObjects.Count; i++)
                         {
                             if (allConnectedObjects[i].realizedObject != null)
@@ -412,6 +419,7 @@ namespace MapWarp
                                 realizedRoom.RemoveObject(allConnectedObjects[i].realizedObject);
                                 realizedRoom.CleanOutObjectNotInThisRoom(allConnectedObjects[i].realizedObject);
                             }
+                            if (allConnectedObjects[i] is AbstractCreature ac) teleported.Add(ac);
                         }
                         room.world.game.shortcuts.CreatureTeleportOutOfRoom(p.realizedCreature, origin, dest);
                     }
