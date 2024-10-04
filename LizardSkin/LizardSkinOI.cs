@@ -2,6 +2,7 @@
 using Menu.Remix;
 using Menu.Remix.MixedUI;
 using Menu.Remix.MixedUI.ValueTypes;
+using Newtonsoft.Json.Linq;
 using RWCustom;
 using System;
 using System.Collections.Generic;
@@ -24,7 +25,6 @@ namespace LizardSkin
         private ProfileManager activeManager;
         private static LizKinCosmeticData cosmeticOnClipboard;
         private List<LizKinCosmeticData.CosmeticPanel> panelsToRemove;
-        private Configurable<int> changes;
         private readonly List<LizKinCosmeticData.CosmeticPanel> panelsToAdd;
         private static LizardSkinOI instance;
 
@@ -33,9 +33,15 @@ namespace LizardSkin
             panelsToAdd = new List<LizKinCosmeticData.CosmeticPanel>();
             panelsToRemove = new List<LizKinCosmeticData.CosmeticPanel>();
 
-            this.changes = config.Bind<int>("version", 0);
-
             instance = this;
+
+            config.Bind<int>("dummy", 0);
+            On.Menu.Remix.ConfigContainer.HasConfigChanged += ConfigContainer_HasConfigChanged;
+        }
+
+        private bool ConfigContainer_HasConfigChanged(On.Menu.Remix.ConfigContainer.orig_HasConfigChanged orig)
+        {
+            return orig() || (ConfigContainer.ActiveInterface == this && hasChanges);
         }
 
         private readonly string modDescription =
@@ -48,21 +54,24 @@ Inside a profile you can add Cosmetics by clicking on the box with a +. Cosmetic
 You can pick Cosmetics of several types, edit their settings and configure randomization. When you're done customizing, hit refresh on the preview panel to see what your sluggo looks like :3";
 
         private int? jumpToTab;
+        private bool hasChanges;
 
         public override void Initialize()
         {
-            changes.Value = 0;
-
             base.Initialize();
             LizardSkin.Debug("LizardSkinOI Initialize");
 
-            // This needs to run
-            // 1; when the config is loaded at launch
-            // 2; when opening the configmenu
-            // 3; when coming back from a config reset, but not from a refresh
-            LizardSkin.Debug("LizardSkinOI Init load data");
-            LoadLizKinData();
-            configBeingEdited = LizKinConfiguration.Clone(configBeingUsed);
+            if(!ModdingMenu.instance.isReload)
+            {
+                // This needs to run
+                // 1; when the config is loaded at launch
+                // 2; when opening the configmenu
+                // 3; when coming back from a config reset, but not from a refresh
+                LizardSkin.Debug("LizardSkinOI Init load data");
+                LoadLizKinData();
+                configBeingEdited = LizKinConfiguration.Clone(configBeingUsed);
+                hasChanges = false;
+            }
 
             this.Tabs = new OpTab[2 + configBeingEdited.profiles.Count];
 
@@ -92,7 +101,6 @@ You can pick Cosmetics of several types, edit their settings and configure rando
 
             this.OnConfigChanged += ConfigOnChange;
             LizardSkin.Debug("LizardSkin init done");
-
         }
 
         public override void Update()
@@ -119,10 +127,10 @@ You can pick Cosmetics of several types, edit their settings and configure rando
                 LizardSkin.Debug("LizardSkinOI Refreshing");
                 lastSelectedTab = ConfigContainer.ActiveTabIndex;
 
-                // ??????
-                //ConfigMenu.RefreshCurrentConfig();
                 refreshOnNextFrame = false;
                 loadingFromRefresh = true;
+
+                ConfigConnector.RequestReloadMenu();
             }
             if (jumpToTab.HasValue)
             {
@@ -203,7 +211,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
         internal void DataChanged()
         {
             LizardSkin.Debug("LizardSkin DataChanged");
-            changes.Value++;
+            this.hasChanges = true;
         }
 
         // CM callback
@@ -212,6 +220,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
             LizardSkin.Debug("LizardSkinOI Conf save data");
             configBeingUsed = LizKinConfiguration.Clone(configBeingEdited);
             SaveLizKinData();
+            hasChanges = false;
         }
 
         private static string GetPath()
@@ -618,8 +627,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
                 LizardSkin.Debug("LizardSkinOI MakeCosmEditPannels");
                 foreach (LizKinCosmeticData cosmeticData in profileData.cosmetics)
                 {
-                    LizardSkin.Debug("Makin new panel");
-
+                    //LizardSkin.Debug("Makin new panel");
                     LizKinCosmeticData.CosmeticPanel panel = cosmeticData.MakeEditPanel(this);
                     //CosmeticEditPanel editPanel = new CosmeticEditPanel(new Vector2(5, 0), new Vector2(360, 100));Moving child element
                     cosmPanels.Add(panel);
@@ -652,9 +660,9 @@ You can pick Cosmetics of several types, edit their settings and configure rando
                 float topleftpos = cosmEditPanelMarginVert / 2;
                 foreach (LizKinCosmeticData.CosmeticPanel panel in cosmPanels)
                 {
-                    LizardSkin.Debug("Moving panel to " + (totalheight - topleftpos));
+                    //LizardSkin.Debug("Moving panel to " + (totalheight - topleftpos));
                     panel.topLeft = new Vector2(3, totalheight - topleftpos);
-                    LizardSkin.Debug("panel is at " + panel.topLeft);
+                    //LizardSkin.Debug("panel is at " + panel.topLeft);
                     topleftpos += panel.size.y + cosmEditPanelMarginVert;
                 }
 
@@ -926,7 +934,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
 
             public void AddSelfAndChildrenToTab(OpTab tab)
             {
-                LizardSkin.Debug("call to AddSelfAndChildrenToTab");
+                //LizardSkin.Debug("call to AddSelfAndChildrenToTab");
                 foreach (UIelement child in children)
                 {
                     originalPositions.Add(child._pos);
@@ -942,7 +950,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
             }
             public void AddSelfAndChildrenToScroll(OpScrollBox scroll)
             {
-                LizardSkin.Debug("call to GroupPanel AddSelfAndChildrenToScroll");
+                //LizardSkin.Debug("call to GroupPanel AddSelfAndChildrenToScroll");
                 foreach (UIelement child in children)
                 {
                     originalPositions.Add(child._pos);
@@ -986,7 +994,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
 
             public void DestroySelfAndChildren()
             {
-                LizardSkin.Debug("call to GroupPanel DestroySelfAndChildren");
+                //LizardSkin.Debug("call to GroupPanel DestroySelfAndChildren");
                 foreach (UIelement child in children)
                 {
                     if (child is IHaveChildren) (child as IHaveChildren).DestroySelfAndChildren();
@@ -999,13 +1007,13 @@ You can pick Cosmetics of several types, edit their settings and configure rando
             {
                 base.Change();
                 if (originalPositions.Count == 0) return; // called from ctor before initialized
-                LizardSkin.Debug("call to GroupPanel Change");
-                LizardSkin.Debug($"main: topleft:{topLeft};; pos:{pos};; _pos:{_pos}");
+                //LizardSkin.Debug("call to GroupPanel Change");
+                //LizardSkin.Debug($"main: topleft:{topLeft};; pos:{pos};; _pos:{_pos}");
 
                 for (int i = 0; i < children.Count; i++)
                 {
                     children[i].SetPos(topLeft + originalPositions[i]);
-                    LizardSkin.Debug($"child: pos:{children[i].pos};; _pos:{children[i]._pos}");
+                    //LizardSkin.Debug($"child: pos:{children[i].pos};; _pos:{children[i]._pos}");
                     //LizardSkin.Debug("Moving child element to " + (topLeft + originalPositions[i]));
                 }
             }

@@ -36,16 +36,16 @@ namespace LizardSkin
         {
             try
             {
-                // Register OptionsInterface
-                options ??= new LizardSkinOI();
-                MachineConnector.SetRegisteredOI("henpemaz_lizardskin", options);
-
                 if (init) return;
                 init = true;
 
                 Logger.LogInfo("OnModsInit");
 
                 ApplyHooksToPlayerGraphics();
+
+                // Json goes brrrr
+                On.Json.Serializer.SerializeOther += Serializer_SerializeOther;
+
                 Futile.atlasManager.LoadAtlas("Atlases/LizKinIcons");
                 Logger.LogInfo("OnModsInit done");
             }
@@ -66,7 +66,12 @@ namespace LizardSkin
             try
             {
                 Logger.LogInfo("PostModsInit");
-                ReadSettings();
+
+                // Register OptionsInterface
+                options ??= new LizardSkinOI();
+                MachineConnector.SetRegisteredOI("henpemaz_lizardskin", options);
+
+                LizardSkinOI.LoadLizKinData();
             }
             catch (Exception e)
             {
@@ -75,15 +80,18 @@ namespace LizardSkin
             }
         }
 
-        private void ReadSettings()
+        private void Serializer_SerializeOther(On.Json.Serializer.orig_SerializeOther orig, Json.Serializer self, object value)
         {
-            //throw new NotImplementedException();
+            if (value is IJsonSerializable) self.SerializeObject((value as IJsonSerializable).ToJson());
+            else orig(self, value);
         }
+
 
         internal static List<LizKinCosmeticData> GetCosmeticsForSlugcat(bool isStorySession, int name, int slugcatCharacter, int playerNumber)
         {
-            if (LizardSkinOI.configBeingUsed == null) // CM hasn't run yet and we're in the game, huh :/
+            if (LizardSkinOI.configBeingUsed == null)
             {
+                sLogger.LogError(new Exception("Lizardskin requested but hasn't loaded yet!"));
                 LizardSkinOI.LoadLizKinData();
             }
             return LizardSkinOI.configBeingUsed.GetCosmeticsForSlugcat(name, slugcatCharacter, playerNumber);

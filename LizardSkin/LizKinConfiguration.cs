@@ -145,6 +145,16 @@ namespace LizardSkin
             }
             instance._bumpDeciMax = Mathf.FloorToInt(Mathf.Log10(instance.IsInt ? Mathf.Max(Mathf.Abs(instance._iMax), Mathf.Abs(instance._iMin)) : Mathf.Max(Mathf.Abs(instance._fMax), Mathf.Abs(instance._fMin))));
         }
+
+        public static void SetRange(this OpUpdown instance, int min, int max)
+        {
+            instance._iMin = min; instance._iMax = max;
+            if (instance._iMin < 0)
+            {
+                instance.allowSpace = true;
+            }
+            instance._bumpDeciMax = Mathf.FloorToInt(Mathf.Log10(instance.IsInt ? Mathf.Max(Mathf.Abs(instance._iMax), Mathf.Abs(instance._iMin)) : Mathf.Max(Mathf.Abs(instance._fMax), Mathf.Abs(instance._fMin))));
+        }
     }
 
     public class LizKinProfileData : IJsonSerializable
