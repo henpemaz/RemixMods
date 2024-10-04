@@ -339,6 +339,7 @@ namespace SpawnMenu
         // close everything and actually spawn stuff
         private void PauseMenu_ShutDownProcess(On.Menu.PauseMenu.orig_ShutDownProcess orig, Menu.PauseMenu self)
         {
+            var wasSingleWorld = self.game.world.singleRoomWorld;
             try
             {
                 if (self.game.IsStorySession)
@@ -420,7 +421,7 @@ namespace SpawnMenu
             }
             finally
             {
-                self.game.world.singleRoomWorld = false;
+                self.game.world.singleRoomWorld = wasSingleWorld;
                 On.WorldCoordinate.ctor_int_int_int_int -= WorldCoordinate_ctor;
                 On.World.GetAbstractRoom_int -= World_GetAbstractRoom_int;
                 doDetour = false;
