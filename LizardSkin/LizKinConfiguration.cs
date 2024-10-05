@@ -1,6 +1,9 @@
-﻿using Menu;
+﻿using HarmonyLib;
+using Menu;
 using Menu.Remix.MixedUI;
 using Menu.Remix.MixedUI.ValueTypes;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,19 +12,7 @@ using UnityEngine;
 
 namespace LizardSkin
 {
-    // So minijson serialize can handle my data
-    // Must serialize everything to supported types
-    // Limiting it to the types minijson outputs makes it so that fromjson(tojson) works properly
-    // long double string dict<str, obj>
-    public interface IJsonSerializable
-    {
-        Dictionary<string, object> ToJson();
-        // Irrelevant since you need to know what type of object to expect to even attempt to read it lol
-        //void ReadFromJson(Dictionary<string, object> json, bool ignoremissing = false);
-    }
-
-
-    public class LizKinConfiguration : IJsonSerializable
+    public class LizKinConfiguration
     {
         private const int version = 1;
         private const int maxProfileCount = 10;
@@ -30,37 +21,6 @@ namespace LizardSkin
         public LizKinConfiguration()
         {
             profiles = new List<LizKinProfileData>();
-        }
-
-        // TODO make these two idempotent
-        public Dictionary<string, object> ToJson()
-        {
-            return new Dictionary<string, object>()
-                {
-                    {"LizKinConfiguration.version", (long)version },
-                    {"profiles", profiles.ConvertAll( // We preemptively convert everything here to Dictionary<string, object> so we can do cloning without going through string serialization
-                    new Converter<LizKinProfileData, Dictionary<string, object>>(LizKinProfileData.ToJsonConverter)).Cast<object>().ToList() }
-                };
-        }
-
-        public void ReadFromJson(Dictionary<string, object> json, bool ignoremissing = false)
-        {
-            if ((long)json["LizKinConfiguration.version"] == 1)
-            {
-                profiles = ((List<object>)json["profiles"]).Cast<Dictionary<string, object>>().ToList().ConvertAll(
-                new Converter<Dictionary<string, object>, LizKinProfileData>(LizKinProfileData.MakeFromJson));
-
-                return;
-            }
-
-            if (!ignoremissing) throw new SerializationException("LizKinConfiguration version unsuported");
-        }
-
-        public static LizKinConfiguration MakeFromJson(Dictionary<string, object> json)
-        {
-            LizKinConfiguration instance = new LizKinConfiguration();
-            instance.ReadFromJson(json);
-            return instance;
         }
 
         public bool AddDefaultProfile()
@@ -130,7 +90,7 @@ namespace LizardSkin
 
         internal static LizKinConfiguration Clone(LizKinConfiguration instance)
         {
-            return LizKinConfiguration.MakeFromJson(instance.ToJson());
+            return JsonConvert.DeserializeObject<LizKinConfiguration>(JsonConvert.SerializeObject(instance, LizardSkin.jsonSerializerSettings), LizardSkin.jsonSerializerSettings);
         }
     }
 
@@ -157,7 +117,7 @@ namespace LizardSkin
         }
     }
 
-    public class LizKinProfileData : IJsonSerializable
+    public class LizKinProfileData
     {
         private const int version = 1;
 
@@ -191,6 +151,12 @@ namespace LizardSkin
 
         public List<LizKinCosmeticData> cosmetics;
 
+        [OnDeserialized]
+        internal void OnDeserializedMethod(StreamingContext context)
+        {
+            cosmetics.Do(c => c.profile = this);
+        }
+
         internal LizKinProfileData()
         {
             profileName = "New Profile";
@@ -203,67 +169,9 @@ namespace LizardSkin
             cosmetics = new List<LizKinCosmeticData>();
         }
 
-        public Dictionary<string, object> ToJson()
-        {
-            return new Dictionary<string, object>()
-                {
-                    {"LizKinProfileData.version", (long)version },
-                    {"profileName", profileName },
-                    {"appliesToMode", (long) appliesToMode },
-                    {"appliesToSelector", (long) appliesToSelector },
-                    {"appliesToList", appliesToList.ConvertAll(Convert.ToInt64).Cast<object>().ToList()},
-                    {"effectColor", MenuColorEffect.ColorToHex(effectColor) },
-                    {"overrideBaseColor", overrideBaseColor },
-                    {"baseColorOverride", MenuColorEffect.ColorToHex(baseColorOverride) },
-                    {"cosmetics", cosmetics.ConvertAll(
-                    new Converter<LizKinCosmeticData, Dictionary<string, object>>(LizKinCosmeticData.ToJsonConverter)).Cast<object>().ToList() },
-                };
-        }
-
-        public virtual void ReadFromJson(Dictionary<string, object> json, bool ignoremissing = false)
-        {
-            if (json.ContainsKey("LizKinProfileData.version"))
-            {
-                if ((long)json["LizKinProfileData.version"] == 1)
-                {
-                    profileName = (string)json["profileName"];
-                    appliesToMode = (ProfileAppliesToMode)(long)json["appliesToMode"];
-                    appliesToSelector = (ProfileAppliesToSelector)(long)json["appliesToSelector"];
-                    appliesToList = (json["appliesToList"] as List<object>).ConvertAll(Convert.ToInt64).ConvertAll(Convert.ToInt32);
-                    effectColor = MenuColorEffect.HexToColor((string)json["effectColor"]);
-                    overrideBaseColor = (bool)json["overrideBaseColor"];
-                    baseColorOverride = MenuColorEffect.HexToColor((string)json["baseColorOverride"]);
-                    cosmetics = ((List<object>)json["cosmetics"]).Cast<Dictionary<string, object>>().ToList().ConvertAll(
-                    new Converter<Dictionary<string, object>, LizKinCosmeticData>(LizKinCosmeticData.MakeFromJson));
-
-                    foreach (LizKinCosmeticData cosmetic in cosmetics)
-                    {
-                        cosmetic.profile = this;
-                    }
-
-                    return;
-                }
-            }
-            if (!ignoremissing) throw new SerializationException("LizKinProfileData version unsuported");
-        }
-
-        public static LizKinProfileData MakeFromJson(Dictionary<string, object> json)
-        {
-            // just one type of profile for now
-            LizKinProfileData instance = new LizKinProfileData();
-            instance.ReadFromJson(json);
-            return instance;
-        }
-
-
         internal static LizKinProfileData Clone(LizKinProfileData instance)
         {
-            return LizKinProfileData.MakeFromJson(instance.ToJson());
-        }
-
-        internal static Dictionary<string, object> ToJsonConverter(LizKinProfileData instance)
-        {
-            return instance.ToJson();
+            return JsonConvert.DeserializeObject<LizKinProfileData>(JsonConvert.SerializeObject(instance, LizardSkin.jsonSerializerSettings), LizardSkin.jsonSerializerSettings);
         }
 
         public Color GetBaseColor(ICosmeticsAdaptor iGraphics, float y) => overrideBaseColor ? baseColorOverride : iGraphics.BodyColorFallback(y);
@@ -290,11 +198,11 @@ namespace LizardSkin
         }
     }
 
-    public abstract class LizKinCosmeticData : IJsonSerializable
+    public abstract class LizKinCosmeticData
     {
-        //const int version = 1; until v0.6
-        private const int version = 2; // v0.7 onwards
+        private const int version = 1;
 
+        [Newtonsoft.Json.JsonIgnore]
         public LizKinProfileData profile;
 
         public enum CosmeticInstanceType
@@ -316,6 +224,7 @@ namespace LizardSkin
         }
 
         public abstract CosmeticInstanceType instanceType { get; }
+        [Newtonsoft.Json.JsonIgnore]
         public Color effectColor => overrideEffectColor ? effectColorOverride : profile.effectColor;
         public Color GetBaseColor(ICosmeticsAdaptor iGraphics, float y) => overrideBaseColor ? baseColorOverride : profile.GetBaseColor(iGraphics, y);
 
@@ -338,7 +247,6 @@ namespace LizardSkin
             BehindHead,
             InFront
         }
-
         public SpritesOverlapConfig spritesOverlap;
 
         public LizKinCosmeticData()
@@ -349,64 +257,12 @@ namespace LizardSkin
             spritesOverlap = SpritesOverlapConfig.Default;
         }
 
-        public virtual Dictionary<string, object> ToJson()
+        internal class LizKinCosmeticDataConverter : AbstractJsonConverter<LizKinCosmeticData>
         {
-            return new Dictionary<string, object>()
-                {
-                    {"LizKinCosmeticData.version", (long)version },
-                    {"instanceType", (long) instanceType },
-                    {"seed", (long) seed },
-                    {"overrideEffectColor", overrideEffectColor },
-                    {"effectColorOverride", MenuColorEffect.ColorToHex(effectColorOverride) },
-                    {"overrideBaseColor", overrideBaseColor },
-                    {"baseColorOverride", MenuColorEffect.ColorToHex(baseColorOverride) },
-                    {"spritesOverlap", (long) spritesOverlap },
-                };
-        }
-
-        // linq go brr
-        public static Dictionary<string, object> ToJsonConverter(LizKinCosmeticData instance)
-        {
-            return instance.ToJson();
-        }
-
-        public virtual void ReadFromJson(Dictionary<string, object> json, bool ignoremissing = false)
-        {
-            if (json.ContainsKey("LizKinCosmeticData.version"))
+            protected override LizKinCosmeticData Create(Type objectType, JObject jObject)
             {
-                if ((long)json["LizKinCosmeticData.version"] == 1)
-                {
-                    seed = (int)(long)json["seed"];
-                    overrideEffectColor = (bool)json["overrideEffectColor"];
-                    effectColorOverride = MenuColorEffect.HexToColor((string)json["effectColorOverride"]);
-                    overrideBaseColor = (bool)json["overrideBaseColor"];
-                    baseColorOverride = MenuColorEffect.HexToColor((string)json["baseColorOverride"]);
-
-                    spritesOverlap = SpritesOverlapConfig.Default;
-                    return;
-                }
-                if ((long)json["LizKinCosmeticData.version"] == 2)
-                {
-                    seed = (int)(long)json["seed"];
-                    overrideEffectColor = (bool)json["overrideEffectColor"];
-                    effectColorOverride = MenuColorEffect.HexToColor((string)json["effectColorOverride"]);
-                    overrideBaseColor = (bool)json["overrideBaseColor"];
-                    baseColorOverride = MenuColorEffect.HexToColor((string)json["baseColorOverride"]);
-
-                    spritesOverlap = (SpritesOverlapConfig)(long)json["spritesOverlap"];
-                    return;
-                }
-
+                return MakeCosmeticOfType((CosmeticInstanceType)Enum.Parse(typeof(CosmeticInstanceType), jObject.GetValue("instanceType").Value<string>()));
             }
-            if (!ignoremissing) throw new SerializationException("LizKinCosmeticData version unsuported");
-        }
-
-
-        public static LizKinCosmeticData MakeFromJson(Dictionary<string, object> json)
-        {
-            LizKinCosmeticData instance = MakeCosmeticOfType((CosmeticInstanceType)(long)json["instanceType"]);
-            instance.ReadFromJson(json);
-            return instance;
         }
 
         internal static LizKinCosmeticData MakeCosmeticOfType(CosmeticInstanceType newType)
@@ -448,12 +304,12 @@ namespace LizardSkin
 
         internal virtual void ReadFromOther(LizKinCosmeticData other)
         {
-            ReadFromJson(other.ToJson(), ignoremissing: true);
+            JsonConvert.PopulateObject(JsonConvert.SerializeObject(other, LizardSkin.jsonSerializerSettings), this, LizardSkin.jsonSerializerSettings);
         }
 
         internal static LizKinCosmeticData Clone(LizKinCosmeticData instance)
         {
-            return LizKinCosmeticData.MakeFromJson(instance.ToJson());
+            return JsonConvert.DeserializeObject<LizKinCosmeticData>(JsonConvert.SerializeObject(instance, LizardSkin.jsonSerializerSettings), LizardSkin.jsonSerializerSettings);
         }
 
         virtual internal CosmeticPanel MakeEditPanel(LizardSkinOI.ProfileManager manager)
@@ -623,45 +479,6 @@ namespace LizardSkin
 
         public override CosmeticInstanceType instanceType => CosmeticInstanceType.Antennae;
 
-        public override void ReadFromJson(Dictionary<string, object> json, bool ignoremissing = false)
-        {
-            base.ReadFromJson(json, ignoremissing);
-            if (json.ContainsKey("CosmeticAntennaeData.version"))
-            {
-                if ((long)json["CosmeticAntennaeData.version"] == 1)
-                {
-                    length = (float)(double)json["length"];
-                    alpha = (float)(double)json["alpha"];
-                    tintColor = MenuColorEffect.HexToColor((string)json["tintColor"]);
-                    segments = (int)(long)json["segments"];
-                    spinepos = (float)(double)json["spinepos"];
-                    angle = (float)(double)json["angle"];
-                    distance = (float)(double)json["distance"];
-                    width = (float)(double)json["width"];
-                    offset = (float)(double)json["offset"];
-                    return;
-                }
-            }
-            if (!ignoremissing) throw new SerializationException("CosmeticAntennaeData version unsuported");
-        }
-
-        public override Dictionary<string, object> ToJson()
-        {
-            return base.ToJson().Concat(new Dictionary<string, object>()
-                {
-                {"CosmeticAntennaeData.version", (long)version },
-                {"length", (double)length },
-                {"alpha", (double)alpha },
-                {"tintColor",  MenuColorEffect.ColorToHex(tintColor)},
-                {"segments", (long)segments },
-                {"spinepos", (double)spinepos },
-                {"angle", (double)angle },
-                {"distance", (double)distance },
-                {"width", (double)width },
-                {"offset", (double)offset },
-                }).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        }
-
         internal override CosmeticPanel MakeEditPanel(LizardSkinOI.ProfileManager manager)
         {
             return new AntennaePanel(this, manager);
@@ -784,38 +601,6 @@ namespace LizardSkin
             roundness = 0.6f;
         }
 
-        public override void ReadFromJson(Dictionary<string, object> json, bool ignoremissing = false)
-        {
-            base.ReadFromJson(json, ignoremissing);
-            if (json.ContainsKey("BodyScalesData.version"))
-            {
-                if ((long)json["BodyScalesData.version"] == 1)
-                {
-                    mode = (GenerationMode)(long)json["mode"];
-                    start = (float)(double)json["start"];
-                    length = (float)(double)json["length"];
-                    count = (int)(long)json["count"];
-                    roundness = (float)(double)json["roundness"];
-                    return;
-                }
-            }
-            if (!ignoremissing) throw new SerializationException("BodyScalesData version unsuported");
-        }
-
-        public override Dictionary<string, object> ToJson()
-        {
-            return base.ToJson().Concat(new Dictionary<string, object>()
-                {
-                    {"BodyScalesData.version", (long)version },
-                    {"mode", (long)mode },
-                    {"start", (double)start },
-                    {"length", (double)length },
-                    {"count", (long)count },
-                    {"roundness", (double)roundness },
-
-                }).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        }
-
         internal override void ReadEditPanel(CosmeticPanel panel)
         {
             base.ReadEditPanel(panel);
@@ -897,40 +682,6 @@ namespace LizardSkin
             thickness = 1f;
         }
 
-        //public override CosmeticInstanceType instanceType => CosmeticInstanceType.???;
-
-        public override void ReadFromJson(Dictionary<string, object> json, bool ignoremissing = false)
-        {
-            base.ReadFromJson(json, ignoremissing);
-            if (json.ContainsKey("LongBodyScalesData.version"))
-            {
-                if ((long)json["LongBodyScalesData.version"] == 1)
-                {
-                    rigor = (float)(double)json["rigor"];
-                    graphic = (int)(long)json["graphic"];
-                    colored = (bool)json["colored"];
-                    scale = (float)(double)json["scale"];
-                    thickness = (float)(double)json["thickness"];
-                    return;
-                }
-            }
-            if (!ignoremissing) throw new SerializationException("LongBodyScalesData version unsuported");
-        }
-
-        public override Dictionary<string, object> ToJson()
-        {
-            return base.ToJson().Concat(new Dictionary<string, object>()
-                {
-                    {"LongBodyScalesData.version", (long)version },
-                    {"rigor", (double)rigor },
-                    {"graphic", (long)graphic },
-                    {"colored", colored },
-                    {"scale", (double)scale },
-                    {"thickness", (double)thickness },
-
-                }).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        }
-
         internal override void ReadEditPanel(CosmeticPanel panel)
         {
             base.ReadEditPanel(panel);
@@ -1003,42 +754,6 @@ namespace LizardSkin
         }
 
         public override CosmeticInstanceType instanceType => CosmeticInstanceType.AxolotlGills;
-
-        public override void ReadFromJson(Dictionary<string, object> json, bool ignoremissing = false)
-        {
-            base.ReadFromJson(json, ignoremissing);
-            if (json.ContainsKey("CosmeticAxolotlGillsData.version"))
-            {
-                if ((long)json["CosmeticAxolotlGillsData.version"] == 1)
-                {
-                    // count = (int)(long)json["count"];
-                    spread = (float)(double)json["spread"];
-
-                    angle = 0f; // new in v 2
-                    return;
-                }
-                if ((long)json["CosmeticAxolotlGillsData.version"] == 2)
-                {
-                    // count = (int)(long)json["count"];
-                    spread = (float)(double)json["spread"];
-                    angle = (float)(double)json["angle"];
-                    return;
-                }
-            }
-            if (!ignoremissing) throw new SerializationException("CosmeticAxolotlGillsData version unsuported");
-        }
-
-        public override Dictionary<string, object> ToJson()
-        {
-            return base.ToJson().Concat(new Dictionary<string, object>()
-                {
-                    {"CosmeticAxolotlGillsData.version", (long)version },
-                    // {"count", (long)count },
-                    {"spread", (double)spread },
-                    {"angle", (double)angle },
-
-                }).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        }
 
         internal override void ReadEditPanel(CosmeticPanel panel)
         {
@@ -1113,42 +828,6 @@ namespace LizardSkin
         }
 
         public override CosmeticInstanceType instanceType => CosmeticInstanceType.BumpHawk;
-
-
-        public override void ReadFromJson(Dictionary<string, object> json, bool ignoremissing = false)
-        {
-            base.ReadFromJson(json, ignoremissing);
-            if (json.ContainsKey("CosmeticBumpHawkData.version"))
-            {
-                if ((long)json["CosmeticBumpHawkData.version"] == 1)
-                {
-                    bumps = (int)(long)json["bumps"];
-                    spineLength = (float)(double)json["spineLength"];
-                    coloredHawk = (bool)json["coloredHawk"];
-                    sizeRangeMin = (float)(double)json["sizeRangeMin"];
-                    sizeRangeMax = (float)(double)json["sizeRangeMax"];
-                    sizeSkewExponent = (float)(double)json["sizeSkewExponent"];
-
-                    return;
-                }
-            }
-            if (!ignoremissing) throw new SerializationException("CosmeticBumpHawkData version unsuported");
-        }
-
-        public override Dictionary<string, object> ToJson()
-        {
-            return base.ToJson().Concat(new Dictionary<string, object>()
-                {
-                    {"CosmeticBumpHawkData.version", (long)version },
-                    {"bumps", (long)bumps },
-                    {"spineLength", (double)spineLength },
-                    {"coloredHawk", coloredHawk },
-                    {"sizeRangeMin", (double)sizeRangeMin },
-                    {"sizeRangeMax", (double)sizeRangeMax },
-                    {"sizeSkewExponent", (double)sizeSkewExponent },
-
-                }).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        }
 
         internal override void ReadEditPanel(CosmeticPanel panel)
         {
@@ -1249,53 +928,6 @@ namespace LizardSkin
         }
 
         public override CosmeticInstanceType instanceType => CosmeticInstanceType.JumpRings;
-
-
-        public override void ReadFromJson(Dictionary<string, object> json, bool ignoremissing = false)
-        {
-            base.ReadFromJson(json, ignoremissing);
-            if (json.ContainsKey("CosmeticJumpRingsData.version"))
-            {
-                if ((long)json["CosmeticJumpRingsData.version"] == 1)
-                {
-
-                    count = (int)(long)json["count"];
-                    spread = (float)(double)json["spread"];
-                    innerScale = (float)(double)json["innerScale"];
-                    spineStart = (float)(double)json["spineStart"];
-                    spineStop = (float)(double)json["spineStop"];
-                    spineExponent = (float)(double)json["spineExponent"];
-                    scaleStart = (float)(double)json["scaleStart"];
-                    scaleStop = (float)(double)json["scaleStop"];
-                    scaleExponent = (float)(double)json["scaleExponent"];
-                    thickness = (float)(double)json["thickness"];
-                    invertOverlap = (bool)json["invertOverlap"];
-
-                    return;
-                }
-            }
-            if (!ignoremissing) throw new SerializationException("CosmeticJumpRingsData version unsuported");
-        }
-
-        public override Dictionary<string, object> ToJson()
-        {
-            return base.ToJson().Concat(new Dictionary<string, object>()
-                {
-                    {"CosmeticJumpRingsData.version", (long)version },
-                    {"count", (long)count },
-                    {"spread", (double)spread },
-                    {"innerScale", (double)innerScale },
-                    {"spineStart", (double)spineStart },
-                    {"spineStop", (double)spineStop },
-                    {"spineExponent", (double)spineExponent },
-                    {"scaleStart", (double)scaleStart },
-                    {"scaleStop", (double)scaleStop },
-                    {"scaleExponent", (double)scaleExponent },
-                    {"thickness", (double)thickness },
-                    {"invertOverlap", invertOverlap },
-
-                }).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        }
 
         internal override void ReadEditPanel(CosmeticPanel panel)
         {
@@ -1423,36 +1055,6 @@ namespace LizardSkin
 
         public override CosmeticInstanceType instanceType => CosmeticInstanceType.LongHeadScales;
 
-        public override void ReadFromJson(Dictionary<string, object> json, bool ignoremissing = false)
-        {
-            base.ReadFromJson(json, ignoremissing);
-            if (json.ContainsKey("CosmeticLongHeadScalesData.version"))
-            {
-                if ((long)json["CosmeticLongHeadScalesData.version"] == 1)
-                {
-
-                    spinePos = (float)(double)json["spinePos"];
-                    offset = (float)(double)json["offset"];
-                    angle = (float)(double)json["angle"];
-
-                    return;
-                }
-            }
-            if (!ignoremissing) throw new SerializationException("CosmeticLongHeadScalesData version unsuported");
-        }
-
-        public override Dictionary<string, object> ToJson()
-        {
-            return base.ToJson().Concat(new Dictionary<string, object>()
-                {
-                    {"CosmeticLongHeadScalesData.version", (long)version },
-                    {"spinePos", (double)spinePos },
-                    {"offset", (double)offset },
-                    {"angle", (double)angle },
-
-                }).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        }
-
         internal override void ReadEditPanel(CosmeticPanel panel)
         {
             base.ReadEditPanel(panel);
@@ -1512,34 +1114,6 @@ namespace LizardSkin
 
         public override CosmeticInstanceType instanceType => CosmeticInstanceType.LongShoulderScales;
 
-
-        public override void ReadFromJson(Dictionary<string, object> json, bool ignoremissing = false)
-        {
-            base.ReadFromJson(json, ignoremissing);
-            if (json.ContainsKey("CosmeticLongShoulderScalesData.version"))
-            {
-                if ((long)json["CosmeticLongShoulderScalesData.version"] == 1)
-                {
-                    minSize = (float)(double)json["minSize"];
-                    sizeExponent = (float)(double)json["sizeExponent"];
-
-                    return;
-                }
-            }
-            if (!ignoremissing) throw new SerializationException("CosmeticLongShoulderScalesData version unsuported");
-        }
-
-        public override Dictionary<string, object> ToJson()
-        {
-            return base.ToJson().Concat(new Dictionary<string, object>()
-                {
-                    {"CosmeticLongShoulderScalesData.version", (long)version },
-                    {"minSize", (double)minSize },
-                    {"sizeExponent", (double)sizeExponent },
-
-                }).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        }
-
         internal override void ReadEditPanel(CosmeticPanel panel)
         {
             base.ReadEditPanel(panel);
@@ -1589,33 +1163,7 @@ namespace LizardSkin
         }
 
         public override CosmeticInstanceType instanceType => CosmeticInstanceType.ShortBodyScales;
-
-        public override void ReadFromJson(Dictionary<string, object> json, bool ignoremissing = false)
-        {
-            base.ReadFromJson(json, ignoremissing);
-            if (json.ContainsKey("CosmeticShortBodyScalesData.version"))
-            {
-                if ((long)json["CosmeticShortBodyScalesData.version"] == 1)
-                {
-                    scale = (float)(double)json["scale"];
-                    thickness = (float)(double)json["thickness"];
-                    return;
-                }
-            }
-            if (!ignoremissing) throw new SerializationException("CosmeticShortBodyScalesData version unsuported");
-        }
-
-        public override Dictionary<string, object> ToJson()
-        {
-            return base.ToJson().Concat(new Dictionary<string, object>()
-                {
-                    {"CosmeticShortBodyScalesData.version", (long)version },
-                    {"scale", (double)scale },
-                    {"thickness", (double)thickness },
-
-                }).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        }
-
+        
         internal override void ReadEditPanel(CosmeticPanel panel)
         {
             base.ReadEditPanel(panel);
@@ -1671,35 +1219,6 @@ namespace LizardSkin
         }
 
         public override CosmeticInstanceType instanceType => CosmeticInstanceType.SpineSpikes;
-
-
-        public override void ReadFromJson(Dictionary<string, object> json, bool ignoremissing = false)
-        {
-            base.ReadFromJson(json, ignoremissing);
-            if (json.ContainsKey("CosmeticSpineSpikesData.version"))
-            {
-                if ((long)json["CosmeticSpineSpikesData.version"] == 1)
-                {
-                    sizeMin = (float)(double)json["sizeMin"];
-                    sizeExponent = (float)(double)json["sizeExponent"];
-                    colorFade = (bool)json["colorFade"];
-                    return;
-                }
-            }
-            if (!ignoremissing) throw new SerializationException("CosmeticSpineSpikesData version unsuported");
-        }
-
-        public override Dictionary<string, object> ToJson()
-        {
-            return base.ToJson().Concat(new Dictionary<string, object>()
-                {
-                    {"CosmeticSpineSpikesData.version", (long)version },
-                    {"sizeMin", (double)sizeMin },
-                    {"sizeExponent", (double)sizeExponent },
-                    {"colorFade", colorFade },
-
-                }).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        }
 
         internal override void ReadEditPanel(CosmeticPanel panel)
         {
@@ -1763,31 +1282,6 @@ namespace LizardSkin
 
         public override CosmeticInstanceType instanceType => CosmeticInstanceType.TailFin;
 
-        public override void ReadFromJson(Dictionary<string, object> json, bool ignoremissing = false)
-        {
-            base.ReadFromJson(json, ignoremissing);
-            if (json.ContainsKey("CosmeticTailFinData.version"))
-            {
-                if ((long)json["CosmeticTailFinData.version"] == 1)
-                {
-                    undersideSize = (float)(double)json["undersideSize"];
-
-                    return;
-                }
-            }
-            if (!ignoremissing) throw new SerializationException("CosmeticTailFinData version unsuported");
-        }
-
-        public override Dictionary<string, object> ToJson()
-        {
-            return base.ToJson().Concat(new Dictionary<string, object>()
-                {
-                    {"CosmeticTailFinData.version", (long)version },
-                    {"undersideSize", (double)undersideSize },
-
-                }).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        }
-
         internal override void ReadEditPanel(CosmeticPanel panel)
         {
             base.ReadEditPanel(panel);
@@ -1841,51 +1335,7 @@ namespace LizardSkin
         }
 
         public override CosmeticInstanceType instanceType => CosmeticInstanceType.TailGeckoScales;
-
-        public override void ReadFromJson(Dictionary<string, object> json, bool ignoremissing = false)
-        {
-            base.ReadFromJson(json, ignoremissing);
-            if (json.ContainsKey("CosmeticTailGeckoScalesData.version"))
-            {
-                if ((long)json["CosmeticTailGeckoScalesData.version"] == 1)
-                {
-                    rows = (int)(long)json["rows"];
-                    lines = (int)(long)json["lines"];
-                    bigScales = (bool)json["bigScales"];
-
-                    return;
-                }
-                if ((long)json["CosmeticTailGeckoScalesData.version"] == 2)
-                {
-                    rows = (int)(long)json["rows"];
-                    lines = (int)(long)json["lines"];
-                    bigScales = (bool)json["bigScales"];
-                    start = (float)(double)json["start"];
-                    stop = (float)(double)json["stop"];
-                    exponent = (float)(double)json["exponent"];
-                    shine = (float)(double)json["shine"];
-                    return;
-                }
-            }
-            if (!ignoremissing) throw new SerializationException("CosmeticTailGeckoScalesData version unsuported");
-        }
-
-        public override Dictionary<string, object> ToJson()
-        {
-            return base.ToJson().Concat(new Dictionary<string, object>()
-                {
-                    {"CosmeticTailGeckoScalesData.version", (long)version },
-                    {"rows", (long)rows },
-                    {"lines", (long)lines },
-                    {"bigScales", bigScales },
-                    {"start", (double)start },
-                    {"stop", (double)stop },
-                    {"exponent", (double)exponent },
-                    {"shine", (double)shine },
-
-                }).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        }
-
+        
         internal override void ReadEditPanel(CosmeticPanel panel)
         {
             base.ReadEditPanel(panel);
@@ -1976,31 +1426,6 @@ namespace LizardSkin
 
         public override CosmeticInstanceType instanceType => CosmeticInstanceType.TailTuft;
 
-        public override void ReadFromJson(Dictionary<string, object> json, bool ignoremissing = false)
-        {
-            base.ReadFromJson(json, ignoremissing);
-            if (json.ContainsKey("CosmeticTailTuftData.version"))
-            {
-                if ((long)json["CosmeticTailTuftData.version"] == 1)
-                {
-                    minSize = (float)(double)json["minSize"];
-
-                    return;
-                }
-            }
-            if (!ignoremissing) throw new SerializationException("CosmeticTailTuftData version unsuported");
-        }
-
-        public override Dictionary<string, object> ToJson()
-        {
-            return base.ToJson().Concat(new Dictionary<string, object>()
-                {
-                    {"CosmeticTailTuftData.version", (long)version },
-                    {"minSize", (double)minSize },
-
-                }).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        }
-
         internal override void ReadEditPanel(CosmeticPanel panel)
         {
             base.ReadEditPanel(panel);
@@ -2052,40 +1477,6 @@ namespace LizardSkin
         }
 
         public override CosmeticInstanceType instanceType => CosmeticInstanceType.Whiskers;
-
-
-        public override void ReadFromJson(Dictionary<string, object> json, bool ignoremissing = false)
-        {
-            base.ReadFromJson(json, ignoremissing);
-            if (json.ContainsKey("CosmeticWhiskersData.version"))
-            {
-                if ((long)json["CosmeticWhiskersData.version"] == 1)
-                {
-                    count = (int)(long)json["count"];
-                    length = (float)(double)json["length"];
-                    thickness = (float)(double)json["thickness"];
-                    spread = (float)(double)json["spread"];
-                    spring = (float)(double)json["spring"];
-
-                    return;
-                }
-            }
-            if (!ignoremissing) throw new SerializationException("CosmeticWhiskersData version unsuported");
-        }
-
-        public override Dictionary<string, object> ToJson()
-        {
-            return base.ToJson().Concat(new Dictionary<string, object>()
-                {
-                    {"CosmeticWhiskersData.version", (long)version },
-                    {"count", (long)count },
-                    {"length", (double)length },
-                    {"thickness", (double)thickness },
-                    {"spread", (double)spread },
-                    {"spring", (double)spring },
-
-                }).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        }
 
         internal override void ReadEditPanel(CosmeticPanel panel)
         {

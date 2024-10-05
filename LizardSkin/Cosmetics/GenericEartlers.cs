@@ -1,6 +1,7 @@
 ﻿using RWCustom;
 using System;
 using System.Collections.Generic;
+using Unity.Mathematics;
 using UnityEngine;
 
 namespace LizardSkin
@@ -47,16 +48,16 @@ namespace LizardSkin
             vertices.Clear();
             vertices.Add(new ScavengerGraphics.Eartlers.Vertex(this.points[0][1].pos, 1f));
             int num = ((double)Vector2.Distance(this.points[0][1].pos, this.points[0][2].pos) <= 0.6 || UnityEngine.Random.value >= 0.5f) ? 1 : 2;
-            Vector2 vector2 = Vector2.Lerp(this.points[0][1].pos, this.points[0][2].pos, Mathf.Lerp(0f, (num != 1) ? 0.25f : 0.7f, UnityEngine.Random.value));
+            float2 vector2 = Unity.Mathematics.math.lerp(this.points[0][1].pos, this.points[0][2].pos, Mathf.Lerp(0f, (num != 1) ? 0.25f : 0.7f, UnityEngine.Random.value));
             vertices.Add(new ScavengerGraphics.Eartlers.Vertex(vector2, 1.2f));
-            vertices.Add(new ScavengerGraphics.Eartlers.Vertex(vector2 + this.points[0][3].pos - this.points[0][2].pos + Custom.DegToVec(UnityEngine.Random.value * 360f) * 0.1f, 1.75f));
+            vertices.Add(new ScavengerGraphics.Eartlers.Vertex(vector2 + this.points[0][3].pos - this.points[0][2].pos + Custom.DegToFloat2(UnityEngine.Random.value * 360f) * 0.1f, 1.75f));
             this.DefineBranch(vertices);
             if (num == 2)
             {
                 vertices.Clear();
                 vector2 = Vector2.Lerp(this.points[0][1].pos, this.points[0][2].pos, Mathf.Lerp(0.45f, 0.7f, UnityEngine.Random.value));
                 vertices.Add(new ScavengerGraphics.Eartlers.Vertex(vector2, 1.2f));
-                vertices.Add(new ScavengerGraphics.Eartlers.Vertex(vector2 + this.points[0][3].pos - this.points[0][2].pos + Custom.DegToVec(UnityEngine.Random.value * 360f) * 0.1f, 1.75f));
+                vertices.Add(new ScavengerGraphics.Eartlers.Vertex(vector2 + this.points[0][3].pos - this.points[0][2].pos + Custom.DegToFloat2(UnityEngine.Random.value * 360f) * 0.1f, 1.75f));
                 this.DefineBranch(vertices);
             }
             bool flag = UnityEngine.Random.value < 0.5f;
@@ -93,7 +94,7 @@ namespace LizardSkin
                 float num5 = Mathf.Lerp(0.25f, 0.4f, UnityEngine.Random.value);
                 vertices.Add(new ScavengerGraphics.Eartlers.Vertex(Custom.DegToVec(num4) * num5, (!flag2) ? Mathf.Lerp(1f, num3, 0.3f) : 0.8f));
                 vertices.Add(new ScavengerGraphics.Eartlers.Vertex(Custom.DegToVec(num4 + Mathf.Lerp(5f, 35f, UnityEngine.Random.value)) * Mathf.Max(num5 + 0.1f, Mathf.Lerp(0.3f, 0.6f, UnityEngine.Random.value)), (!flag2) ? Mathf.Lerp(1f, num3, 0.6f) : 0.8f));
-                vertices.Add(new ScavengerGraphics.Eartlers.Vertex(vertices[vertices.Count - 1].pos.normalized * (vertices[vertices.Count - 1].pos.magnitude + Mathf.Lerp(0.15f, 0.25f, UnityEngine.Random.value)), num3));
+                vertices.Add(new ScavengerGraphics.Eartlers.Vertex(vertices[vertices.Count - 1].pos.normalized() * (vertices[vertices.Count - 1].pos.magnitude() + Unity.Mathematics.math.lerp(0.15f, 0.25f, UnityEngine.Random.value)), num3));
                 this.DefineBranch(vertices);
             }
             UnityEngine.Random.seed = oldseed;
@@ -225,33 +226,7 @@ namespace LizardSkin
             {
                 return new EartlersConfigPanel(this, manager);
             }
-            public override Dictionary<string, object> ToJson()
-            {
-                var res = base.ToJson();
-                res.Add("genericEartlers.version", (long)1);
-                res.Add("eartlersDom", (double)this.dominance);
-                res.Add("eartlersThic", (double)this.eartlerWidth);
-                return res;
-            }
-            public override void ReadFromJson(Dictionary<string, object> json, bool ignoremissing = false)
-            {
-                base.ReadFromJson(json, ignoremissing);
-                try
-                {
-                    if (json.TryGetValue("genericEartlers.version", out object v) && ((long)v == 1))
-                    {
-                        this.dominance = (float)(double)json["eartlersDom"];
-                        this.eartlerWidth = (float)(double)json["eartlersThic"];
-                    }
 
-                }
-                catch (Exception e)
-                {
-                    LizardSkin.Debug(e);
-                    this.dominance = 0.01f;
-                    this.eartlerWidth = 0.99f;
-                }
-            }
             internal override void ReadEditPanel(CosmeticPanel panel)
             {
                 base.ReadEditPanel(panel);
@@ -268,7 +243,6 @@ namespace LizardSkin
             {
 
             }
-
         }
     }
 }

@@ -2,12 +2,14 @@
 using Menu.Remix;
 using Menu.Remix.MixedUI;
 using Menu.Remix.MixedUI.ValueTypes;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using RWCustom;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Policy;
 using UnityEngine;
 
 namespace LizardSkin
@@ -37,6 +39,13 @@ namespace LizardSkin
 
             config.Bind<int>("dummy", 0);
             On.Menu.Remix.ConfigContainer.HasConfigChanged += ConfigContainer_HasConfigChanged;
+            On.OptionInterface.ResetUIelements += OptionInterface_ResetUIelements;
+        }
+
+        private void OptionInterface_ResetUIelements(On.OptionInterface.orig_ResetUIelements orig, OptionInterface self)
+        {
+            if (self == this) return; // sTOP fucking with my "cosmetic" uiconfigs
+            orig(self);
         }
 
         private bool ConfigContainer_HasConfigChanged(On.Menu.Remix.ConfigContainer.orig_HasConfigChanged orig)
@@ -100,6 +109,8 @@ You can pick Cosmetics of several types, edit their settings and configure rando
             Tabs[Tabs.Length - 1].AddItems(new NewProfileHandler(this), new NotAManagerTab(this));
 
             this.OnConfigChanged += ConfigOnChange;
+            this.OnConfigReset += LizardSkinOI_OnConfigReset;
+
             LizardSkin.Debug("LizardSkin init done");
         }
 
@@ -132,7 +143,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
 
                 ConfigConnector.RequestReloadMenu();
             }
-            if (jumpToTab.HasValue)
+            else if (jumpToTab.HasValue)
             {
                 LizardSkin.Debug("LizardSkin jumpToTab");
 
@@ -211,16 +222,56 @@ You can pick Cosmetics of several types, edit their settings and configure rando
         internal void DataChanged()
         {
             LizardSkin.Debug("LizardSkin DataChanged");
+            LizardSkin.Debug(Environment.StackTrace);
             this.hasChanges = true;
+        }
+
+        // I made my own callbacks
+        internal void OnConfigReload()
+        {
+            LizardSkin.Debug("LizardSkinOI reload config");
+            LizardSkin.Debug(Environment.StackTrace);
+            //LoadLizKinData();
+            //configBeingEdited = LizKinConfiguration.Clone(configBeingUsed);
+            //hasChanges = false;
         }
 
         // CM callback
         private void ConfigOnChange()
         {
             LizardSkin.Debug("LizardSkinOI Conf save data");
-            configBeingUsed = LizKinConfiguration.Clone(configBeingEdited);
-            SaveLizKinData();
-            hasChanges = false;
+            if (hasChanges)
+            {
+                LizardSkin.Debug("actually saving changes");
+                LizardSkin.Debug(Environment.StackTrace);
+
+                LizardSkin.Debug("appliesToList were:");
+                for (int i = 0; i < configBeingEdited.profiles.Count; i++)
+                {
+                    LizardSkin.Debug(string.Join(", ", configBeingEdited.profiles[i].appliesToList.Select(c => c.ToString())));
+                }
+
+                configBeingUsed = LizKinConfiguration.Clone(configBeingEdited);
+
+                LizardSkin.Debug("appliesToList became:");
+                for (int i = 0; i < configBeingUsed.profiles.Count; i++)
+                {
+                    LizardSkin.Debug(string.Join(", ", configBeingUsed.profiles[i].appliesToList.Select(c => c.ToString())));
+                }
+                SaveLizKinData();
+                hasChanges = false;
+            }
+            else
+            {
+                LizardSkin.Debug("no changes");
+            }
+        }
+
+        private void LizardSkinOI_OnConfigReset()
+        {
+            configBeingEdited = MakeEmptyLizKinData();
+            hasChanges = true;
+            RequestRefresh();
         }
 
         private static string GetPath()
@@ -233,11 +284,13 @@ You can pick Cosmetics of several types, edit their settings and configure rando
         {
             LizardSkin.Debug("LizardSkinOI LoadLizKinData");
             // read from disk
-            string path = GetPath();
-            if (File.Exists(path))
+            try
             {
-                string raw = File.ReadAllText(path);
-                configBeingUsed = LizKinConfiguration.MakeFromJson(Json.Deserialize(raw) as Dictionary<string, object>);
+                configBeingUsed = JsonConvert.DeserializeObject<LizKinConfiguration>(File.ReadAllText(GetPath()), LizardSkin.jsonSerializerSettings);
+            }
+            catch (Exception ex)
+            {
+                LizardSkin.Debug(ex);
             }
 
             if (configBeingUsed == null || configBeingUsed.profiles.Count == 0)
@@ -332,7 +385,11 @@ You can pick Cosmetics of several types, edit their settings and configure rando
             LizardSkin.Debug("LizardSkinOI SaveLizKinData");
             if (configBeingUsed == null) return;
             string path = GetPath();
-            File.WriteAllText(path, Json.Serialize(configBeingUsed));
+            string content = JsonConvert.SerializeObject(configBeingUsed, LizardSkin.jsonSerializerSettings);
+            LizardSkin.Debug("writing");
+            LizardSkin.Debug(path);
+            LizardSkin.Debug(content);
+            File.WriteAllText(path, content);
         }
 
         // Element that handles the new profile tab, triggers a callback on show
@@ -788,7 +845,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
             private void FiltersGrabConfig()
             {
                 LizardSkin.Debug("FiltersGrabConfig");
-                //LizardSkin.Debug("profileData.appliesToList was " + String.Join(", ", profileData.appliesToList.Select(n => n.ToString()).ToArray()));
+                LizardSkin.Debug("profileData.appliesToList was " + String.Join(", ", profileData.appliesToList.Select(n => n.ToString()).ToArray()));
                 LizKinProfileData.ProfileAppliesToMode previousMode = profileData.appliesToMode;
                 LizKinProfileData.ProfileAppliesToMode newMode = (LizKinProfileData.ProfileAppliesToMode)Enum.Parse(typeof(LizKinProfileData.ProfileAppliesToMode), appliesToModeSelector.value);
                 profileData.appliesToMode = newMode;
@@ -802,7 +859,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
                         profileData.appliesToList = new List<int>();
                         if (appliesTo0.GetValueBool() && appliesTo1.GetValueBool() && appliesTo2.GetValueBool() && appliesTo3.GetValueBool())
                         {
-                            //LizardSkin.Debug("all checks set");
+                            LizardSkin.Debug("all checks set");
                             profileData.appliesToList.Add(-1);
                         }
                         else
@@ -824,7 +881,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
 
                         break;
                 }
-                //LizardSkin.Debug("profileData.appliesToList now is  " + String.Join(", ", profileData.appliesToList.Select(n => n.ToString()).ToArray()));
+                LizardSkin.Debug("profileData.appliesToList now is  " + String.Join(", ", profileData.appliesToList.Select(n => n.ToString()).ToArray()));
                 if (previousMode != newMode || String.Join(", ", previousList.Select(n => n.ToString()).ToArray()) != String.Join(", ", profileData.appliesToList.Select(n => n.ToString()).ToArray())) lizardSkinOI.DataChanged(); // This could probably be optimized
             }
 
@@ -832,7 +889,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
             private void FiltersConformToConfig()
             {
                 LizardSkin.Debug("FiltersConformToConfig");
-                //LizardSkin.Debug("profileData.appliesToList was " + String.Join(", ", profileData.appliesToList.Select(n => n.ToString()).ToArray()));
+                LizardSkin.Debug("profileData.appliesToList was " + String.Join(", ", profileData.appliesToList.Select(n => n.ToString()).ToArray()));
                 LizKinProfileData.ProfileAppliesToMode currentMode = profileData.appliesToMode;
                 appliesTo0._newvalue = (profileData.appliesToList.Contains(-1) || profileData.appliesToList.Contains(0)) ? "true" : "false";
                 appliesTo1._newvalue = (profileData.appliesToList.Contains(-1) || profileData.appliesToList.Contains(1)) ? "true" : "false";
@@ -907,7 +964,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
                         appliesTo3Label.description = "";
                         break;
                 }
-                //LizardSkin.Debug("profileData.appliesToList now is  " + String.Join(", ", profileData.appliesToList.Select(n => n.ToString()).ToArray()));
+                LizardSkin.Debug("profileData.appliesToList now is  " + String.Join(", ", profileData.appliesToList.Select(n => n.ToString()).ToArray()));
             }
         }
 
@@ -1201,6 +1258,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
             {
                 this.showLabel = showLabel;
                 OnReactivate += Show;
+                OnValueUpdate += (_, _, _) => OnValueChangedEvent?.Invoke();
             }
 
             new public void Show()
@@ -1219,35 +1277,32 @@ You can pick Cosmetics of several types, edit their settings and configure rando
             }
 
             public event OnValueChangedHandler OnValueChangedEvent;
-            public override string value
-            {
-                set
-                {
-                    bool change = value != _value;
-                    base.value = value;
-                    if (change) OnValueChangedEvent?.Invoke();
-                }
-            }
         }
 
         internal class EventfulComboBox : OpComboBox
         {
-            public EventfulComboBox(Vector2 pos, float width, List<ListItem> list, string defaultName = "") : base(instance.config.Bind<string>("", list[0].name), pos, width, list)
+            public EventfulComboBox(Vector2 pos, float width, List<ListItem> list, string defaultName = "") : base(instance.config.Bind<string>("", defaultName), pos, width, list)
             {
+                OnValueUpdate += (_, _, _) => OnValueChangedEvent?.Invoke();
             }
 
-            public EventfulComboBox(Vector2 pos, float width, string[] array, string defaultName = "") : base(instance.config.Bind<string>("", array[0]), pos, width, array)
+            public EventfulComboBox(Vector2 pos, float width, string[] array, string defaultName = "") : base(instance.config.Bind<string>("", defaultName), pos, width, array)
             {
+                OnValueUpdate += (_, _, _) => OnValueChangedEvent?.Invoke();
             }
 
             public event OnValueChangedHandler OnValueChangedEvent;
-            public override string value
+            public override void GrafUpdate(float timeStacker)
             {
-                set
+                base.GrafUpdate(timeStacker);
+                if (this._rectList != null && !_rectList.isHidden)
                 {
-                    bool change = value != _value;
-                    base.value = value;
-                    if (change) OnValueChangedEvent?.Invoke();
+                    myContainer.MoveToFront();
+
+                    for (int j = 0; j < 9; j++)
+                    {
+                        this._rectList.sprites[j].alpha = 1;
+                    }
                 }
             }
         }
@@ -1255,26 +1310,18 @@ You can pick Cosmetics of several types, edit their settings and configure rando
         internal class EventfulTextBox : OpTextBox
         {
             //public EventfulTextBox(Vector2 pos, float sizeX, string key, string defaultValue = "TEXT", Accept accept = Accept.StringASCII) : base(pos, sizeX, key, defaultValue, accept)
-            public EventfulTextBox(Vector2 pos, float sizeX, string defaultValue = "TEXT") : base(instance.config.Bind<string>("", ""), pos, sizeX)
+            public EventfulTextBox(Vector2 pos, float sizeX, string defaultValue = "TEXT") : base(instance.config.Bind<string>("", defaultValue), pos, sizeX)
             {
                 // Attempt at fixing bug that happens when defaultvalue gets trimmed in the ctor, causes nullref in CM 1454?
                 this._value = defaultValue;
                 this.lastValue = defaultValue;
                 
                 this.defaultValue = defaultValue;
+                OnValueUpdate += (_, _, _) => OnValueChangedEvent?.Invoke();
                 Change();
             }
 
             public event OnValueChangedHandler OnValueChangedEvent;
-            public override string value
-            {
-                set
-                {
-                    bool change = value != _value;
-                    base.value = value;
-                    if (change) OnValueChangedEvent?.Invoke();
-                }
-            }
 
             public string _newvalue
             {
@@ -1299,22 +1346,15 @@ You can pick Cosmetics of several types, edit their settings and configure rando
         {
             public EventfulCheckBox(Vector2 pos, bool defaultBool = false) : base(instance.config.Bind<bool>("", defaultBool), pos)
             {
+                OnValueUpdate += (_, _, _) => OnValueChangedEvent?.Invoke();
             }
 
             public EventfulCheckBox(float posX, float posY, bool defaultBool = false) : base(instance.config.Bind<bool>("", defaultBool), posX, posY)
             {
+                OnValueUpdate += (_, _, _) => OnValueChangedEvent?.Invoke();
             }
 
             public event OnValueChangedHandler OnValueChangedEvent;
-            public override string value
-            {
-                set
-                {
-                    bool change = value != _value;
-                    base.value = value;
-                    if (change) OnValueChangedEvent?.Invoke();
-                }
-            }
 
             public string _newvalue
             {
@@ -1329,24 +1369,15 @@ You can pick Cosmetics of several types, edit their settings and configure rando
         {
             public EventfulUpdown(Vector2 pos, float sizeX, int defaultInt) : base(instance.config.Bind<int>("", defaultInt, new ConfigAcceptableRange<int>(0,1)), pos, sizeX)
             {
+                OnValueUpdate += (_, _, _) => OnValueChangedEvent?.Invoke();
             }
 
             public EventfulUpdown(Vector2 pos, float sizeX, float defaultFloat, byte decimalNum = 1) : base(instance.config.Bind<float>("", defaultFloat, new ConfigAcceptableRange<float>(0f, 1f)), pos, sizeX, decimalNum)
             {
+                OnValueUpdate += (_, _, _) => OnValueChangedEvent?.Invoke();
             }
 
             public event OnValueChangedHandler OnValueChangedEvent;
-            public override string value
-            {
-                set
-                {
-                    bool change = value != _value;
-                    base.value = value;
-                    if (change && _value == value &&
-                        !(bool)typeof(OpTextBox).GetField("_keyboardOn", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic).GetValue(this)
-                        ) OnValueChangedEvent?.Invoke();
-                }
-            }
 
             public event OnFrozenUpdateHandler OnFrozenUpdate;
             public override void Update()
@@ -1362,19 +1393,10 @@ You can pick Cosmetics of several types, edit their settings and configure rando
         {
             public EventfulResourceSelector(Vector2 pos, float width, T defaultName) : base(instance.config.Bind<T>("", defaultName), pos, width)
             {
-
+                OnValueUpdate += (_, _, _) => OnValueChangedEvent?.Invoke();
             }
 
             public event OnValueChangedHandler OnValueChangedEvent;
-            public override string value
-            {
-                set
-                {
-                    bool change = value != _value;
-                    base.value = value;
-                    if (change) OnValueChangedEvent?.Invoke();
-                }
-            }
 
             public string _newvalue
             {
@@ -1382,6 +1404,11 @@ You can pick Cosmetics of several types, edit their settings and configure rando
                 {
                     _value = value;
                 }
+            }
+
+            public override void Reset()
+            {
+                base.Reset();
             }
         }
     }
