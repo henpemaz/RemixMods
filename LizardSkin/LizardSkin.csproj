@@ -50,7 +50,6 @@
     <Compile Include="Cosmetics\GenericBodyScales.cs" />
     <Compile Include="Cosmetics\GenericBumpHawk.cs" />
     <Compile Include="Cosmetics\GenericCosmeticTemplate.cs" />
-    <Compile Include="Cosmetics\GenericEartlers.cs" />
     <Compile Include="Cosmetics\GenericJumpRings.cs" />
     <Compile Include="Cosmetics\GenericLizardScale.cs" />
     <Compile Include="Cosmetics\GenericLongBodyScales.cs" />

@@ -220,7 +220,6 @@ namespace LizardSkin
             TailTuft,
             Whiskers,
             WingScales,
-            ScavEartlers
         }
 
         public abstract CosmeticInstanceType instanceType { get; }
@@ -295,8 +294,6 @@ namespace LizardSkin
                     return new CosmeticWhiskersData();
                 case CosmeticInstanceType.WingScales:
                     return new CosmeticWingScalesData();
-                case CosmeticInstanceType.ScavEartlers:
-                    return new GenericEartlers.GenericEartlersCosmeticData();
                 default:
                     throw new ArgumentException("Unsupported instance type");
             }

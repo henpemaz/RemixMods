@@ -44,8 +44,6 @@ namespace LizardSkin
                     return new GenericWhiskers(iGraphics, cosmeticData);
                 case LizKinCosmeticData.CosmeticInstanceType.WingScales:
                     return new GenericWingScales(iGraphics, cosmeticData);
-                case LizKinCosmeticData.CosmeticInstanceType.ScavEartlers:
-                    return new GenericEartlers(iGraphics, cosmeticData);
                 default:
                     throw new Exception("Unsupported cosmetic data type");
             }
