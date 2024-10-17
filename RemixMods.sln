@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LizardSkin", "LizardSkin\Li
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LapMod", "LapMod\LapMod.csproj", "{787B67E9-CC52-45F4-9448-EDDCB7017032}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tag", "Tag\Tag.csproj", "{94DDE503-CAA4-4499-ACDB-46DCACDBFB18}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -63,6 +65,10 @@ Global
 		{787B67E9-CC52-45F4-9448-EDDCB7017032}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{787B67E9-CC52-45F4-9448-EDDCB7017032}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{787B67E9-CC52-45F4-9448-EDDCB7017032}.Release|Any CPU.Build.0 = Release|Any CPU
+		{94DDE503-CAA4-4499-ACDB-46DCACDBFB18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{94DDE503-CAA4-4499-ACDB-46DCACDBFB18}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{94DDE503-CAA4-4499-ACDB-46DCACDBFB18}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{94DDE503-CAA4-4499-ACDB-46DCACDBFB18}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
