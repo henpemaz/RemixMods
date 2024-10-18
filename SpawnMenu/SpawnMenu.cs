@@ -331,7 +331,7 @@ namespace SpawnMenu
         {
             orig(self, timeStacker);
             if (!self.game.IsStorySession || self.game.pauseMenu == null) return;
-            foreach (var cam in self.game.cameras) cam.DrawUpdate(0f, 1f);
+            if (self.game.GamePaused) foreach (var cam in self.game.cameras) cam.DrawUpdate(0f, 1f);
             // so icons and cursor also update otherwise this would get quite verbose in here
             // timespeed 1 so audio doesnt glitch out
         }
