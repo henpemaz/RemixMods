@@ -12,7 +12,9 @@ namespace TagMod
         public bool setupStarted;
         public bool huntStarted;
         public bool huntEnded;
-        public ushort setupTime = 20;
+        public ushort setupTime = 60;
+        internal bool lastHuntStarted;
+        internal bool lastHuntEnded;
 
         public TagLobbyData() { }
 

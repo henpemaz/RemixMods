@@ -14,6 +14,11 @@ namespace TagMod
         public TagGameMode(Lobby lobby) : base(lobby)
         {
             hunterData = new HunterData();
+
+            avatarSettings.eyeColor = RainMeadow.RainMeadow.rainMeadowOptions.EyeColor.Value;
+            avatarSettings.bodyColor = RainMeadow.RainMeadow.rainMeadowOptions.BodyColor.Value;
+            avatarSettings.playingAs = SlugcatStats.Name.White;
+            avatarSettings.nickname = OnlineManager.mePlayer.id.name;
         }
 
         public override void ResourceAvailable(OnlineResource onlineResource)
@@ -22,6 +27,11 @@ namespace TagMod
             if (onlineResource is Lobby lobby)
             {
                 this.tagData = lobby.AddData(new TagLobbyData());
+                if (lobby.isOwner)
+                {
+                    this.tagData.startingRoom = "SU_S01";
+                    currentCampaign = SlugcatStats.Name.White;
+                }
             }
         }
 
@@ -47,6 +57,8 @@ namespace TagMod
         {
             base.LobbyTick(tick);
             var game = RWCustom.Custom.rainWorld.processManager.currentMainLoop as RainWorldGame;
+            if (game != null && !game.processActive) game = null;
+
             hunterData.lastHunter = hunterData.hunter;
             hunterData.hunter = (game != null) ? tagData.hunters.Contains(OnlineManager.mePlayer) : false;
             if (hunterData.hunter && !hunterData.lastHunter)
@@ -59,23 +71,14 @@ namespace TagMod
                 TagMod.Debug("not hunter! resetting color");
                 avatarSettings.bodyColor = origBodyColor;
             }
-            if (game != null)
-            {
-                if (hunterData.hunter != hunterData.lastHunter)
-                {
-                    if (game.cameras[0].room != null)
-                    {
-                        game.cameras[0].ApplyPalette(); // recolor self
-                    }
-                }
-            }
-
+            
             if (lobby.isOwner) // management
             {
                 if (game != null)
                 {
                     if (tagData.setupStarted && TagMod.hideTimer.SetupTimer <= 0)
                     {
+                        if (!tagData.huntStarted) lobby.NewVersion();
                         tagData.huntStarted = true;
                     }
 
@@ -86,13 +89,9 @@ namespace TagMod
                         var hidersCount = lobby.clientSettings.Where(c => !tagData.hunters.Contains(c.Key) && c.Value.inGame).Count();
                         var deadHiders = lobby.clientSettings.Where(c => !tagData.hunters.Contains(c.Key) && c.Value.TryGetData<StoryClientSettingsData>(out var scd) && scd.isDead).Count();
 
-                        if (hunterCount == deadHunters || hidersCount == deadHiders || hunterCount == 0 || hidersCount == 0)
+                        if (hunterCount == deadHunters || hidersCount == deadHiders || hunterCount == 0 || hidersCount == 0 || game.world.rainCycle.deathRainHasHit)
                         {
-                            tagData.huntEnded = true;
-                        }
-
-                        if (game.world.rainCycle.deathRainHasHit)
-                        {
+                            if (!tagData.huntEnded) lobby.NewVersion();
                             tagData.huntEnded = true;
                         }
                     }
@@ -102,6 +101,40 @@ namespace TagMod
                     tagData.hunters.Clear();
                 }
             }
+
+            if (game != null)
+            {
+                if (hunterData.hunter != hunterData.lastHunter)
+                {
+                    if (game.cameras[0].room != null)
+                    {
+                        TagMod.Debug("recolor!");
+                        game.cameras[0].ApplyPalette(); // recolor self
+                    }
+                }
+
+                if (tagData.huntStarted && !tagData.lastHuntStarted) // start
+                {
+                    TagMod.Debug("Start!");
+                    game.cameras[0].room.PlaySound(SoundID.UI_Multiplayer_Game_Start, 0f, 0.4f, 1f);
+                }
+
+                if (hunterData.hunter && !hunterData.lastHunter && tagData.huntStarted) // caught
+                {
+                    TagMod.Debug("Caught!");
+                    game.cameras[0].room.PlaySound(SoundID.UI_Multiplayer_Player_Dead_A, 0f, 0.4f, 1f);
+                }
+
+                if (tagData.huntEnded && !tagData.lastHuntEnded) // end
+                {
+                    TagMod.Debug("Round end!");
+                    game.cameras[0].room.PlaySound(SoundID.UI_Multiplayer_Game_Over, 0f, 0.4f, 1f);
+                }
+            }
+
+            tagData.lastHuntStarted = tagData.huntStarted;
+            tagData.lastHuntEnded = tagData.huntEnded;
+
 
             if (UnityEngine.Input.GetKey(KeyCode.L)) { TagMod.Debug("hunters are " + string.Join(", ", tagData.hunters)); }
         }
@@ -127,6 +160,7 @@ namespace TagMod
                 tagData.setupStarted = false;
                 tagData.huntStarted = false;
                 tagData.huntEnded = false;
+                lobby.NewVersion();
             }
         }
 

@@ -86,6 +86,7 @@ namespace TagMod
         private void Tagged(TagGameMode tag, Player self, PhysicalObject otherObject)
         {
             if (tag.tagData.huntStarted
+                    && !tag.tagData.huntEnded
                     && self.abstractPhysicalObject == self.abstractPhysicalObject.world.game.GetStorySession.Players[0]
                     && self.abstractPhysicalObject.GetOnlineObject() is OnlinePhysicalObject mine
                     && mine.isMine
@@ -95,9 +96,6 @@ namespace TagMod
             {
                 if (tag.hunterData.hunter && 
                     !tag.tagData.hunters.Contains(theirs.owner))
-                    // lobby.clientSettings.TryGetValue(theirs.owner, out var theirClient) 
-                    //&& theirClient.TryGetData<HunterData>(out var theirHunterData)
-                    //&& theirHunterData.hunter)
                 {
                     foreach (OnlineEvent outgoingEvent in OnlineManager.lobby.owner.OutgoingEvents)
                     {
@@ -106,7 +104,8 @@ namespace TagMod
                             return;
                         }
                     }
-                    self.PlayHUDSound(SoundID.SS_AI_Give_The_Mark_Boom);
+                    TagMod.Debug("Ding!");
+                    self.abstractCreature.world.game.cameras[0].room.PlaySound(SoundID.SS_AI_Give_The_Mark_Boom, 0f, 0.5f, 1f); // catch!
                     OnlineManager.lobby.owner.InvokeRPC(NowHunter, theirs.owner);
                 }
             }
@@ -120,6 +119,7 @@ namespace TagMod
             {
                 TagMod.Debug(newHunter);
                 tag.tagData.hunters.Add(newHunter);
+                tag.lobby.NewVersion();
             }
         }
         
@@ -131,6 +131,7 @@ namespace TagMod
             {
                 TagMod.Debug(rpcEvent.from);
                 tag.tagData.hunters.Remove(rpcEvent.from);
+                tag.lobby.NewVersion();
             }
         }
 
@@ -148,14 +149,14 @@ namespace TagMod
             return orig(self, result, eu);
         }
 
+        // update hunter color of others (self color is in taggamemode tick)
         private void PlayerGraphics_DrawSprites(On.PlayerGraphics.orig_DrawSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
         {
             if (RainMeadow.OnlineManager.lobby != null && RainMeadow.OnlineManager.lobby.gameMode is TagGameMode tag)
             {
                 var oe = self.player.abstractCreature.GetOnlineObject();
-                if (oe != null)
+                if (oe != null && !oe.isMine && oe.TryGetData<HunterData>(out var hunterData))
                 {
-                    var hunterData = oe.GetData<HunterData>();
                     if (UnityEngine.Input.GetKey(KeyCode.L)) { TagMod.Debug($"{oe} hunter?" + hunterData.hunter + ";lasthunter?"+hunterData.lastHunter); }
                     if (hunterData.hunter != hunterData.lastHunter)
                     {

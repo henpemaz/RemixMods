@@ -1,7 +1,10 @@
-﻿using Menu.Remix;
+﻿using Menu;
+using Menu.Remix;
+using Menu.Remix.MixedUI;
 using RainMeadow;
 using System;
 using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEngine;
 
 namespace TagMod
@@ -17,6 +20,7 @@ namespace TagMod
         private ProperlyAlignedMenuLabel namesLabel;
         private ProperlyAlignedMenuLabel hidingLabel;
         private ProperlyAlignedMenuLabel huntingLabel;
+        private OpUpdown setupTime;
 
         public TagMenu(ProcessManager manager) : base(manager, TagMod.TagMenu)
         {
@@ -24,11 +28,6 @@ namespace TagMod
             this.lobby = OnlineManager.lobby;
             this.gamemode = (TagGameMode)lobby.gameMode;
             this.customization = gamemode.avatarSettings;
-
-            customization.eyeColor = RainMeadow.RainMeadow.rainMeadowOptions.EyeColor.Value;
-            customization.bodyColor = RainMeadow.RainMeadow.rainMeadowOptions.BodyColor.Value;
-            customization.playingAs = SlugcatStats.Name.White;
-            customization.nickname = OnlineManager.mePlayer.id.name;
 
             this.customizationHolder = new SlugcatCustomizationSelector(this, this.mainPage, new Vector2(540, 460), customization);
             mainPage.subObjects.Add(this.customizationHolder);
@@ -39,18 +38,29 @@ namespace TagMod
 
             if (lobby.isOwner)
             {
-                System.Collections.Generic.List<Menu.Remix.MixedUI.ListItem> shelters = RainWorld.roomNameToIndex.Keys.Where(k => k.Length > 3 && k[2] == '_' && (k[3] == 'S' || k[3] == 's')).Select(e => new Menu.Remix.MixedUI.ListItem(e)).ToList();
-                this.shelterSelect = new OpComboBox2(new Configurable<string>("SU_S01"), new Vector2(540, 400), 120, shelters);
+                var shelterPattern = new Regex(@"^.._[sS]\d\d");
+                System.Collections.Generic.List<Menu.Remix.MixedUI.ListItem> shelters = RainWorld.roomNameToIndex.Keys.Where(k => shelterPattern.IsMatch(k)).Select(e => new Menu.Remix.MixedUI.ListItem(e)).ToList();
+                
+                mainPage.subObjects.Add(new MenuLabel(this, mainPage, "Starting shelter", new Vector2(550, 400), new Vector2(120, 20), false));
+                this.shelterSelect = new OpComboBox2(new Configurable<string>(gamemode.tagData.startingRoom), new Vector2(700, 400), 120, shelters);
                 new UIelementWrapper(tabWrapper, this.shelterSelect);
                 shelterSelect.OnValueChanged += ShelterSelect_OnValueChanged;
-                gamemode.tagData.startingRoom = "SU_S01";
 
-                gamemode.currentCampaign = SlugcatStats.Name.White;
+                mainPage.subObjects.Add(new MenuLabel(this, mainPage, "Setup time (seconds)", new Vector2(550, 360), new Vector2(120, 20), false));
+                this.setupTime = new OpUpdown(new Configurable<int>(gamemode.tagData.setupTime, accept: new ConfigAcceptableRange<int>(0, 600)), new Vector2(700, 360), 120);
+                new UIelementWrapper(tabWrapper, this.setupTime);
+                setupTime._lastArrX = setupTime._arrX; // crazy how these ui elements all have a quirk or three
+                setupTime.OnValueChanged += SetupTime_OnValueChanged;
             }
 
             mainPage.subObjects.Add(namesLabel = new RainMeadow.ProperlyAlignedMenuLabel(this, mainPage, "", new Vector2(870, 560), new Vector2(150, 20f), false));
             mainPage.subObjects.Add(hidingLabel = new RainMeadow.ProperlyAlignedMenuLabel(this, mainPage, "", new Vector2(1020, 560), new Vector2(60, 20f), false));
             mainPage.subObjects.Add(huntingLabel = new RainMeadow.ProperlyAlignedMenuLabel(this, mainPage, "", new Vector2(1100, 560), new Vector2(60, 20f), false));
+        }
+
+        private void SetupTime_OnValueChanged(UIconfig config, string value, string oldValue)
+        {
+            gamemode.tagData.setupTime = (ushort)Mathf.Clamp(setupTime.valueInt, 0, 600);
         }
 
         private void ShelterSelect_OnValueChanged(Menu.Remix.MixedUI.UIconfig config, string value, string oldValue)

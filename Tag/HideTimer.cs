@@ -15,6 +15,8 @@ namespace TagMod
         private float Readtimer;
         private bool isRunning;
         private TimerMode currentMode = TimerMode.Waiting;  // Track which timer is active
+        private TimerMode showMode = TimerMode.Waiting;  // Track which timer is being displayed
+        private TimerMode matchMode = TimerMode.Waiting; // mode at start of match
         private FLabel timerLabel;
         private FLabel modeLabel;
         private Vector2 pos, lastPos;
@@ -29,6 +31,7 @@ namespace TagMod
             HiderTimer = 0f;
             HunterTimer = 0f;
             isRunning = false;
+            matchMode = tgm.hunterData.hunter ? TimerMode.Hunter : TimerMode.Hiding;
 
             timerLabel = new FLabel("font", FormatTime(0))
             {
@@ -45,7 +48,7 @@ namespace TagMod
             pos = new Vector2(80f, hud.rainWorld.options.ScreenSize.y - 60f);
             lastPos = pos;
             timerLabel.SetPosition(DrawPos(1f));
-            modeLabel.SetPosition(DrawPos(1f) + new Vector2(120f, 0f));
+            modeLabel.SetPosition(DrawPos(1f) + new Vector2(135f, 0f));
 
             fContainer.AddChild(timerLabel);
             fContainer.AddChild(modeLabel);
@@ -67,30 +70,25 @@ namespace TagMod
             {
                 case { setupStarted: false }:
                     currentMode = TimerMode.Setup;
+                    showMode = TimerMode.Setup;
                     SetupTimer = tgm.tagData.setupTime;
+                    matchMode = tgm.hunterData.hunter ? TimerMode.Hunter : TimerMode.Hiding;
                     isRunning = false;
                     break;
                 case { setupStarted: true, huntStarted: false }:
                     currentMode = TimerMode.Setup;
+                    showMode = TimerMode.Setup;
+                    matchMode = tgm.hunterData.hunter ? TimerMode.Hunter : TimerMode.Hiding;
                     isRunning = true;
                     break;
                 case { huntStarted: true, huntEnded: false }:
                     var nextMode = tgm.hunterData.hunter ? TimerMode.Hunter : TimerMode.Hiding;
-                    if (nextMode != currentMode && currentMode != TimerMode.Waiting)
+
+                    if(currentMode == TimerMode.Waiting || currentMode == TimerMode.Setup)
                     {
-                        switch (currentMode)
-                        {
-                            case TimerMode.Setup:
-                                SetupTimer = 0f;
-                                hud.PlaySound(SoundID.SL_AI_Protest_3);
-                                break;
-                            case TimerMode.Hiding:
-                                hud.PlaySound(SoundID.SL_AI_Pain_1);
-                                break;
-                            case TimerMode.Hunter:
-                                break;
-                        }
+                        showMode = matchMode; // sticks to start-of-match mode
                     }
+
                     currentMode = nextMode;
                     isRunning = true;
                     if (player.dead || player.playerState.permaDead)
@@ -121,31 +119,40 @@ namespace TagMod
                 case TimerMode.Setup:
                     if (isRunning) SetupTimer -= Time.deltaTime;
                     SetupTimer = Mathf.Max(SetupTimer, 0f);
-                    //if (isRunning) TagMod.Stacktrace();
-                    Readtimer = SetupTimer;
                     break;
                 case TimerMode.Hiding:
                     if (isRunning) HiderTimer += Time.deltaTime;
-                    Readtimer = HiderTimer;
                     break;
                 case TimerMode.Hunter:
                     if (isRunning) HunterTimer += Time.deltaTime;
+                    break;
+            }
+
+            switch (showMode)
+            {
+                case TimerMode.Setup:
+                    Readtimer = SetupTimer;
+                    break;
+                case TimerMode.Hiding:
+                    Readtimer = HiderTimer;
+                    break;
+                case TimerMode.Hunter:
                     Readtimer = HunterTimer;
                     break;
             }
 
             timerLabel.text = FormatTime(Readtimer);
-            modeLabel.text = currentMode.ToString();
+            modeLabel.text = showMode.ToString();
         }
 
-        // Format time to MM:SS
+        // Format time to MM:SS:MMM
         public static string FormatTime(float time)
         {
             int minutes = Mathf.FloorToInt(time / 60);
             int seconds = Mathf.FloorToInt(time % 60);
-            int milliseconds = Mathf.FloorToInt((time % 1) * 100);
+            int milliseconds = Mathf.FloorToInt((time % 1) * 1000);
 
-            return $"{minutes:D2}:{seconds:D2}:{milliseconds:D2}";
+            return $"{minutes:D2}:{seconds:D2}:{milliseconds:D3}";
         }
 
         public override void ClearSprites()

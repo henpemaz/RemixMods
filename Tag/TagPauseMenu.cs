@@ -59,19 +59,18 @@ namespace TagMod
 
         private void Start(SimplerButton button)
         {
+            TagMod.DebugMe();
             tgm.tagData.setupStarted = true;
+            tgm.lobby.NewVersion();
         }
 
         private void Reset(SimplerButton button)
         {
-            OnlineManager.lobby.participants.Select(p=>p.InvokeRPC(ToLobby));
-        }
-
-        [RPCMethod]
-        public static void ToLobby()
-        {
-            RWCustom.Custom.rainWorld.processManager.upcomingProcess = null;
-            RWCustom.Custom.rainWorld.processManager.RequestMainProcessSwitch(OnlineManager.lobby.gameMode.MenuProcessId());
+            TagMod.DebugMe();
+            tgm.tagData.setupStarted = false;
+            tgm.tagData.huntStarted = false;
+            tgm.tagData.hunters.Clear();
+            tgm.lobby.NewVersion();
         }
 
         private void ToggleTeam(SimplerButton button)
@@ -90,6 +89,7 @@ namespace TagMod
         {
             teamBtn.buttonBehav.greyedOut = tgm.tagData.setupStarted;
             if (startBtn != null) startBtn.buttonBehav.greyedOut = tgm.tagData.setupStarted || tgm.tagData.hunters.Count == 0;
+            if (resetBtn != null) resetBtn.buttonBehav.greyedOut = tgm.tagData.huntEnded || tgm.tagData.hunters.Count == 0;
             if (hunterCount != null) hunterCount.menuLabel.text = "Hunters: " + tgm.tagData.hunters.Count;
             base.Update();
         }
