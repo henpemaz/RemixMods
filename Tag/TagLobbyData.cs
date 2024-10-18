@@ -8,7 +8,11 @@ namespace TagMod
     public class TagLobbyData : OnlineResource.ResourceData
     {
         public List<OnlinePlayer> hunters = new();
-        internal string startingRoom = "";
+        public string startingRoom = "";
+        public bool setupStarted;
+        public bool huntStarted;
+        public bool huntEnded;
+        public ushort setupTime = 20;
 
         public TagLobbyData() { }
 
@@ -23,11 +27,24 @@ namespace TagMod
             RainMeadow.Generics.DynamicUnorderedUshorts hunters;
             [OnlineField]
             string startingRoom;
+            [OnlineField]
+            public bool setupStarted;
+            [OnlineField]
+            public bool huntStarted;
+            [OnlineField]
+            public bool huntEnded;
+            [OnlineField]
+            public ushort setupTime;
+
             public TagState() { }
             public TagState(TagLobbyData tagLobbyData)
             {
                 hunters = new(tagLobbyData.hunters.Select(p => p.inLobbyId).ToList());
                 startingRoom = tagLobbyData.startingRoom;
+                setupStarted = tagLobbyData.setupStarted;
+                huntStarted = tagLobbyData.huntStarted;
+                huntEnded = tagLobbyData.huntEnded;
+                setupTime = tagLobbyData.setupTime;
             }
 
             public override Type GetDataType() => typeof(TagLobbyData);
@@ -35,8 +52,12 @@ namespace TagMod
             public override void ReadTo(OnlineResource.ResourceData data, OnlineResource resource)
             {
                 TagLobbyData tagLobbyData = (TagLobbyData)data;
-                tagLobbyData.hunters = hunters.list.Select(i => OnlineManager.lobby.PlayerFromId(i)).ToList();
+                tagLobbyData.hunters = hunters.list.Select(i => OnlineManager.lobby.PlayerFromId(i)).Where(p => p != null).ToList();
                 tagLobbyData.startingRoom = startingRoom;
+                tagLobbyData.setupStarted = setupStarted;
+                tagLobbyData.huntStarted = huntStarted;
+                tagLobbyData.huntEnded = huntEnded;
+                tagLobbyData.setupTime = setupTime;
             }
         }
     }

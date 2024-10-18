@@ -1,5 +1,6 @@
 ﻿using Menu;
 using RainMeadow;
+using System.Linq;
 using UnityEngine;
 
 namespace TagMod
@@ -24,6 +25,12 @@ namespace TagMod
             }
         }
 
+        public override void AddClientData()
+        {
+            base.AddClientData();
+            clientSettings.AddData(hunterData);
+        }
+
         public override void ConfigureAvatar(OnlineCreature onlineCreature)
         {
             base.ConfigureAvatar(onlineCreature);
@@ -39,8 +46,9 @@ namespace TagMod
         public override void LobbyTick(uint tick)
         {
             base.LobbyTick(tick);
+            var game = RWCustom.Custom.rainWorld.processManager.currentMainLoop as RainWorldGame;
             hunterData.lastHunter = hunterData.hunter;
-            hunterData.hunter = tagData.hunters.Contains(OnlineManager.mePlayer);
+            hunterData.hunter = (game != null) ? tagData.hunters.Contains(OnlineManager.mePlayer) : false;
             if (hunterData.hunter && !hunterData.lastHunter)
             {
                 TagMod.Debug("hunter! applying war paint");
@@ -50,6 +58,49 @@ namespace TagMod
             {
                 TagMod.Debug("not hunter! resetting color");
                 avatarSettings.bodyColor = origBodyColor;
+            }
+            if (game != null)
+            {
+                if (hunterData.hunter != hunterData.lastHunter)
+                {
+                    if (game.cameras[0].room != null)
+                    {
+                        game.cameras[0].ApplyPalette(); // recolor self
+                    }
+                }
+            }
+
+            if (lobby.isOwner) // management
+            {
+                if (game != null)
+                {
+                    if (tagData.setupStarted && TagMod.hideTimer.SetupTimer <= 0)
+                    {
+                        tagData.huntStarted = true;
+                    }
+
+                    if (tagData.huntStarted)
+                    {
+                        var hunterCount = tagData.hunters.Count;
+                        var deadHunters = lobby.clientSettings.Where(c => tagData.hunters.Contains(c.Key) && c.Value.TryGetData<StoryClientSettingsData>(out var scd) && scd.isDead).Count();
+                        var hidersCount = lobby.clientSettings.Where(c => !tagData.hunters.Contains(c.Key) && c.Value.inGame).Count();
+                        var deadHiders = lobby.clientSettings.Where(c => !tagData.hunters.Contains(c.Key) && c.Value.TryGetData<StoryClientSettingsData>(out var scd) && scd.isDead).Count();
+
+                        if (hunterCount == deadHunters || hidersCount == deadHiders || hunterCount == 0 || hidersCount == 0)
+                        {
+                            tagData.huntEnded = true;
+                        }
+
+                        if (game.world.rainCycle.deathRainHasHit)
+                        {
+                            tagData.huntEnded = true;
+                        }
+                    }
+                }
+                else
+                {
+                    tagData.hunters.Clear();
+                }
             }
 
             if (UnityEngine.Input.GetKey(KeyCode.L)) { TagMod.Debug("hunters are " + string.Join(", ", tagData.hunters)); }
@@ -69,8 +120,14 @@ namespace TagMod
         public override void GameShutDown(RainWorldGame game)
         {
             base.GameShutDown(game);
-            tagData.hunters.Clear();
             avatarSettings.bodyColor = origBodyColor;
+            if (lobby.isOwner)
+            {
+                tagData.hunters.Clear();
+                tagData.setupStarted = false;
+                tagData.huntStarted = false;
+                tagData.huntEnded = false;
+            }
         }
 
         public override ProcessManager.ProcessID MenuProcessId()

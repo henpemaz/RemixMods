@@ -6,8 +6,10 @@ namespace TagMod
 {
     public class HunterData : OnlineEntity.EntityData
     {
+        public bool lastHunter; // local
         public bool hunter;
-        public bool lastHunter;
+        public float TotalTimeHiding;
+        public float TotalTimeHunting;
 
         public HunterData() { }
 
@@ -20,11 +22,17 @@ namespace TagMod
         {
             [OnlineField]
             public bool hunter;
+            [OnlineField]
+            public float totalTimeHiding;
+            [OnlineField]
+            public float totalTimeHunting;
 
             public State() { }
             public State(HunterData hunterData)
             {
                 hunter = hunterData.hunter;
+                totalTimeHiding = hunterData.TotalTimeHiding;
+                totalTimeHunting = hunterData.TotalTimeHunting;
             }
 
             public override Type GetDataType() => typeof(HunterData);
@@ -33,6 +41,9 @@ namespace TagMod
             {
                 var hunterData = (HunterData)data;
                 hunterData.hunter = hunter;
+                hunterData.TotalTimeHiding = totalTimeHiding;
+                hunterData.TotalTimeHunting = totalTimeHunting;
+
                 if (UnityEngine.Input.GetKey(KeyCode.L))
                 {
                     TagMod.Debug("hunter? " + hunter);

@@ -1,6 +1,7 @@
 ﻿using Menu;
 using RainMeadow;
 using System;
+using System.Linq;
 using UnityEngine;
 
 namespace TagMod
@@ -11,8 +12,9 @@ namespace TagMod
         private Creature avatarCreature;
         private int targetHub;
         private int suco4;
-        private SimplerButton joinHuntersBtn;
-        private SimplerButton resetHuntersBtn;
+        private SimplerButton teamBtn;
+        private SimplerButton resetBtn;
+        private SimplerButton startBtn;
         private SimplerButton hunterCount;
 
         public TagPauseMenu(ProcessManager manager, RainWorldGame game, TagGameMode tgm) : base(manager, game)
@@ -45,32 +47,50 @@ namespace TagMod
                 buttonCount += 1;
                 return button;
             }
-            this.joinHuntersBtn = AddButton(this.Translate("BE HUNTER"), this.Translate("Become the hunter for this round"), this.JoinHunters);
+            this.teamBtn = AddButton(this.Translate("TEAM"), this.Translate("Become a hunter for this round"), this.ToggleTeam);
 
             if (OnlineManager.lobby.isOwner)
             {
-                this.resetHuntersBtn = AddButton(this.Translate("RESET HUNTERS"), this.Translate("Reset hunters"), this.ResetHunters);
+                this.resetBtn = AddButton(this.Translate("RESET"), this.Translate(""), this.Reset);
+                this.startBtn = AddButton(this.Translate("START"), this.Translate(""), this.Start);
                 this.hunterCount = AddButton("", this.Translate("And they're hungry"), (_) => { });
             }
         }
 
-        private void ResetHunters(SimplerButton button)
+        private void Start(SimplerButton button)
         {
-            tgm.tagData.hunters.Clear();
+            tgm.tagData.setupStarted = true;
         }
 
-        private void JoinHunters(SimplerButton button)
+        private void Reset(SimplerButton button)
         {
-            OnlineManager.lobby.owner.InvokeRPC(TagMod.NowHunter, OnlineManager.mePlayer);
+            OnlineManager.lobby.participants.Select(p=>p.InvokeRPC(ToLobby));
+        }
+
+        [RPCMethod]
+        public static void ToLobby()
+        {
+            RWCustom.Custom.rainWorld.processManager.upcomingProcess = null;
+            RWCustom.Custom.rainWorld.processManager.RequestMainProcessSwitch(OnlineManager.lobby.gameMode.MenuProcessId());
+        }
+
+        private void ToggleTeam(SimplerButton button)
+        {
+            if (!tgm.hunterData.hunter)
+            {
+                OnlineManager.lobby.owner.InvokeRPC(TagMod.NowHunter, OnlineManager.mePlayer);
+            }
+            else
+            {
+                OnlineManager.lobby.owner.InvokeRPC(TagMod.LeaveHunters);
+            }
         }
 
         public override void Update()
         {
-            joinHuntersBtn.buttonBehav.greyedOut = tgm.tagData.hunters.Count > 0;
-            if(hunterCount != null)
-            {
-                hunterCount.menuLabel.text = "Hunters: " + tgm.tagData.hunters.Count;
-            }
+            teamBtn.buttonBehav.greyedOut = tgm.tagData.setupStarted;
+            if (startBtn != null) startBtn.buttonBehav.greyedOut = tgm.tagData.setupStarted || tgm.tagData.hunters.Count == 0;
+            if (hunterCount != null) hunterCount.menuLabel.text = "Hunters: " + tgm.tagData.hunters.Count;
             base.Update();
         }
 

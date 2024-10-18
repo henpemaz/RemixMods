@@ -14,6 +14,9 @@ namespace TagMod
         private SlugcatCustomizationSelector customizationHolder;
         private SimplerButton playButton;
         private OpComboBox2 shelterSelect;
+        private ProperlyAlignedMenuLabel namesLabel;
+        private ProperlyAlignedMenuLabel hidingLabel;
+        private ProperlyAlignedMenuLabel huntingLabel;
 
         public TagMenu(ProcessManager manager) : base(manager, TagMod.TagMenu)
         {
@@ -34,7 +37,6 @@ namespace TagMod
             playButton.OnClick += Play;
             mainPage.subObjects.Add(playButton);
 
-
             if (lobby.isOwner)
             {
                 System.Collections.Generic.List<Menu.Remix.MixedUI.ListItem> shelters = RainWorld.roomNameToIndex.Keys.Where(k => k.Length > 3 && k[2] == '_' && (k[3] == 'S' || k[3] == 's')).Select(e => new Menu.Remix.MixedUI.ListItem(e)).ToList();
@@ -45,6 +47,10 @@ namespace TagMod
 
                 gamemode.currentCampaign = SlugcatStats.Name.White;
             }
+
+            mainPage.subObjects.Add(namesLabel = new RainMeadow.ProperlyAlignedMenuLabel(this, mainPage, "", new Vector2(870, 560), new Vector2(150, 20f), false));
+            mainPage.subObjects.Add(hidingLabel = new RainMeadow.ProperlyAlignedMenuLabel(this, mainPage, "", new Vector2(1020, 560), new Vector2(60, 20f), false));
+            mainPage.subObjects.Add(huntingLabel = new RainMeadow.ProperlyAlignedMenuLabel(this, mainPage, "", new Vector2(1100, 560), new Vector2(60, 20f), false));
         }
 
         private void ShelterSelect_OnValueChanged(Menu.Remix.MixedUI.UIconfig config, string value, string oldValue)
@@ -57,9 +63,24 @@ namespace TagMod
             }
         }
 
+        public override void Update()
+        {
+            base.Update();
+            if (!lobby.isOwner) playButton.buttonBehav.greyedOut = !gamemode.isInGame;
+
+            namesLabel.text = string.Join("\n", new string[] { "Players" }.Concat(lobby.clientSettings.Select(c => c.Value.TryGetData<HunterData>(out var data) ?
+            c.Key.id.name
+            : null).Where(t => t != null)));
+            hidingLabel.text = string.Join("\n", new string[] { "Hiding" }.Concat(lobby.clientSettings.Select(c => c.Value.TryGetData<HunterData>(out var data) ?
+            HideTimer.FormatTime(data.TotalTimeHiding)
+            : null).Where(t => t != null)));
+            huntingLabel.text = string.Join("\n", new string[] { "Hunting" }.Concat(lobby.clientSettings.Select(c => c.Value.TryGetData<HunterData>(out var data) ?
+            HideTimer.FormatTime(data.TotalTimeHunting)
+            : null).Where(t => t != null)));
+        }
+
         private void Play(SimplerButton button)
         {
-
             TagMod.Debug("my name is " + customization.nickname);
             TagMod.Debug("starting room is " + gamemode.tagData.startingRoom);
             manager.arenaSitting = null;
