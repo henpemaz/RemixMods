@@ -64,7 +64,7 @@ namespace TagMod
             if (hunterData.hunter && !hunterData.lastHunter)
             {
                 TagMod.Debug("hunter! applying war paint");
-                avatarSettings.bodyColor = Color.Lerp(origBodyColor, new Color(1f, 23f / 51f, 23f / 51f), 0.66f);
+                avatarSettings.bodyColor = Color.Lerp(origBodyColor, new Color(1f, 23f / 51f, 23f / 51f), 0.60f);
             }
             if (!hunterData.hunter && hunterData.lastHunter)
             {

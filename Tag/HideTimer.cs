@@ -83,23 +83,29 @@ namespace TagMod
                     break;
                 case { huntStarted: true, huntEnded: false }:
                     var nextMode = tgm.hunterData.hunter ? TimerMode.Hunter : TimerMode.Hiding;
-
                     if(currentMode == TimerMode.Waiting || currentMode == TimerMode.Setup)
                     {
                         showMode = matchMode; // sticks to start-of-match mode
                     }
 
-                    currentMode = nextMode;
-                    isRunning = true;
                     if (player.dead || player.playerState.permaDead)
                     {
+                        if (isRunning) // cash in on death
+                        {
+                            tgm.hunterData.TotalTimeHiding += HiderTimer;
+                            tgm.hunterData.TotalTimeHunting += HunterTimer;
+                        }
                         currentMode = TimerMode.Waiting;
-                        isRunning = false;
+                        isRunning = false; // oops this makes so we don't cash in, fix me
+                    }
+                    else
+                    {
+                        currentMode = nextMode;
+                        isRunning = true;
                     }
                     break;
                 case { huntEnded: true }:
-                    //currentMode = tgm.hunterData.hunter ? TimerMode.Hunter : TimerMode.Hiding;
-                    if (isRunning)
+                    if (isRunning) // cash in on end
                     {
                         tgm.hunterData.TotalTimeHiding += HiderTimer;
                         tgm.hunterData.TotalTimeHunting += HunterTimer;

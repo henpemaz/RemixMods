@@ -34,7 +34,7 @@ namespace TagMod
             SimplerButton AddButton(string localizedText, string localizedDescription, Action<SimplerButton> onClick, bool active = true)
             {
                 Vector2 pos = new Vector2(
-                    this.ContinueAndExitButtonsXPos - 250.2f - this.moveLeft - this.manager.rainWorld.options.SafeScreenOffset.x,
+                    this.ContinueAndExitButtonsXPos - 460.2f - this.moveLeft - this.manager.rainWorld.options.SafeScreenOffset.x,
                     Mathf.Max(manager.rainWorld.options.SafeScreenOffset.y, 15f) + 40.2f
                 );
                 pos.y += (buttonCount) * 40f;
