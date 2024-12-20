@@ -4,11 +4,7 @@ using System.Security;
 using System.Security.Permissions;
 using BepInEx;
 using BepInEx.Logging;
-using IL.RWCustom;
 using UnityEngine;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 
 [module: UnverifiableCode]
@@ -17,7 +13,7 @@ using System.Linq;
 
 namespace LapMod
 {
-    [BepInPlugin("com.henpemaz.lapmod", "Lap Mod", "0.1.1")]
+    [BepInPlugin("com.henpemaz.lapmod", "Lap Mod", "0.1.2")]
 
     public class LapMod : BaseUnityPlugin
     {
@@ -80,7 +76,26 @@ namespace LapMod
             }
         }
 
-        static TimeSpan defaultTime;
+        private static TimeSpan defaultTime;
+
+        private Player player;
+
+        private static TimeSpan totalTimeTracker;
+        private static String timeString;
+
+        private int wantsNextRoomCounter = 0;
+        public static bool wantsNextRoom = false;
+
+        private static int enteredFromNode = -1;
+        private static int timerWhenEntered = 0;
+
+        private static TimeSpan time1;
+        private static TimeSpan time2;
+        public static TimeSpan timeDiff;
+
+        private static RWCustom.IntVector2 shortcutPos;
+
+        private static bool isNewRoom = false;
 
         private static void RoomCamera_ctor(On.RoomCamera.orig_ctor orig, RoomCamera self, RainWorldGame game,
             int cameraNumber)
@@ -101,19 +116,6 @@ namespace LapMod
             Panel.Remove();
             orig(self);
         }
-
-
-        private Player player;
-
-        private static TimeSpan totalTimeTracker;
-        private static String timeString;
-
-        private int wantsNextRoomCounter = 0;
-        public static bool wantsNextRoom = false;
-
-        private static int enteredFromNode = -1;
-        private static int timerWhenEntered = 0;
-
 
         public void PlayerUpdateHook(On.Player.orig_Update orig, Player self, bool eu)
         {
@@ -173,36 +175,6 @@ namespace LapMod
                 handler.betweenRoomsWaitingLobby.Add(vessel);
                 player.RemoveFromRoom();
                 GetTimes();
-            }
-        }
-
-
-        static TimeSpan time1;
-        static TimeSpan time2;
-        public static TimeSpan timeDiff;
-        static RWCustom.IntVector2 shortcutPos;
-        static bool isNewRoom = false;
-
-        private void SpitOutOfShortCutHook(On.Player.orig_SpitOutOfShortCut orig, Player self, RWCustom.IntVector2 pos, Room newRoom, bool spitOutAllSticks)
-        {
-            if (isNewRoom)
-            {
-                Debug("Lap Mod: Entering room at " + timeString);
-                time1 = totalTimeTracker;
-            }
-            isNewRoom = false;
-            orig(self, pos, newRoom, spitOutAllSticks);
-        }
-
-        private static void GetTimes()
-        {
-            isNewRoom = true;
-            time2 = totalTimeTracker;
-            timeDiff = time2.Subtract(time1);
-            Debug("LapMod: Exiting/looping room at: " + timeString);
-            if (timeDiff != null)
-            {
-                Debug("Lap Mod: Total room time " + timeDiff.ToString("mm'm:'ss's:'fff'ms'"));
             }
         }
 
@@ -273,6 +245,28 @@ namespace LapMod
             }
 
             orig(self);
+        }
+        private void SpitOutOfShortCutHook(On.Player.orig_SpitOutOfShortCut orig, Player self, RWCustom.IntVector2 pos, Room newRoom, bool spitOutAllSticks)
+        {
+            if (isNewRoom)
+            {
+                Debug("Lap Mod: Entering room at " + timeString);
+                time1 = totalTimeTracker;
+            }
+            isNewRoom = false;
+            orig(self, pos, newRoom, spitOutAllSticks);
+        }
+
+        private static void GetTimes()
+        {
+            isNewRoom = true;
+            time2 = totalTimeTracker;
+            timeDiff = time2.Subtract(time1);
+            Debug("LapMod: Exiting/looping room at: " + timeString);
+            if (timeDiff != null)
+            {
+                Debug("Lap Mod: Total room time " + timeDiff.ToString("mm'm:'ss's:'fff'ms'"));
+            }
         }
     }
 }
