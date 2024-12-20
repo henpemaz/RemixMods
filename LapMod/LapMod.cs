@@ -4,7 +4,11 @@ using System.Security;
 using System.Security.Permissions;
 using BepInEx;
 using BepInEx.Logging;
+using IL.RWCustom;
 using UnityEngine;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 
 [module: UnverifiableCode]
@@ -85,6 +89,7 @@ namespace LapMod
             if(!game.IsArenaSession)
             {
                 Panel.Initialize();
+                // Reset times on new room/campaign
                 time1 = defaultTime;
                 time2 = defaultTime;
                 timeDiff = defaultTime;
@@ -100,14 +105,14 @@ namespace LapMod
 
         private Player player;
 
-        static TimeSpan totalTimeTracker;
-        static String timeString;
+        private static TimeSpan totalTimeTracker;
+        private static String timeString;
 
-        static int wantsNextRoomCounter = 0;
+        private int wantsNextRoomCounter = 0;
         public static bool wantsNextRoom = false;
 
-        static int enteredFromNode = -1;
-        static int timerWhenEntered = 0;
+        private static int enteredFromNode = -1;
+        private static int timerWhenEntered = 0;
 
 
         public void PlayerUpdateHook(On.Player.orig_Update orig, Player self, bool eu)
@@ -116,6 +121,7 @@ namespace LapMod
             orig(self, eu);
         }
 
+        private int resetCounter = 0;
         private void RainWorldGame_UpdateHook(On.RainWorldGame.orig_Update orig, RainWorldGame self)
         {
             if(!self.IsArenaSession)
@@ -129,25 +135,52 @@ namespace LapMod
                 }
 
                 KeyCode passthroughKey = LapModRemix.roomPassthroughKey.Value;
+                KeyCode resetKey = LapModRemix.resetKey.Value;
                 if (Input.GetKey(passthroughKey) && wantsNextRoomCounter == 0)
                 {
                     wantsNextRoom = !wantsNextRoom;
-                    wantsNextRoomCounter = 12;
+                    wantsNextRoomCounter = 12; // ~1/3 sec before another press is accepted
                     Debug("Lap Mod: Player wants next room set to " + wantsNextRoom.ToString());
                 }
                 else if (wantsNextRoomCounter > 0)
                 {
                     wantsNextRoomCounter--;
                 }
+
+                if (Input.GetKey(resetKey) && resetCounter == 0)
+                {
+                    reset();
+                    resetCounter = 12;
+                }
+                else if (resetCounter > 0)
+                {
+                    resetCounter--;
+                }
             }
             orig(self);
+        }
 
+        private void reset()
+        {
+            if (!player.abstractCreature.Room.shelter) {
+                RainWorldGame game = player.room.game;
+                ShortcutHandler handler = game.shortcuts;
+
+                ShortcutHandler.ShortCutVessel vessel = new ShortcutHandler.ShortCutVessel(shortcutPos, player, player.room.abstractRoom, 0);
+
+                vessel.entranceNode = enteredFromNode;
+                handler.game.world.rainCycle.timer = timerWhenEntered;
+                handler.betweenRoomsWaitingLobby.Add(vessel);
+                player.RemoveFromRoom();
+                GetTimes();
+            }
         }
 
 
         static TimeSpan time1;
         static TimeSpan time2;
         public static TimeSpan timeDiff;
+        static RWCustom.IntVector2 shortcutPos;
         static bool isNewRoom = false;
 
         private void SpitOutOfShortCutHook(On.Player.orig_SpitOutOfShortCut orig, Player self, RWCustom.IntVector2 pos, Room newRoom, bool spitOutAllSticks)
@@ -161,6 +194,17 @@ namespace LapMod
             orig(self, pos, newRoom, spitOutAllSticks);
         }
 
+        private static void GetTimes()
+        {
+            isNewRoom = true;
+            time2 = totalTimeTracker;
+            timeDiff = time2.Subtract(time1);
+            Debug("LapMod: Exiting/looping room at: " + timeString);
+            if (timeDiff != null)
+            {
+                Debug("Lap Mod: Total room time " + timeDiff.ToString("mm'm:'ss's:'fff'ms'"));
+            }
+        }
 
         static void ShortcutHandler_Update(On.ShortcutHandler.orig_Update orig, ShortcutHandler self)
         {
@@ -170,27 +214,18 @@ namespace LapMod
                 {
                     if (self.transportVessels[i].room.realizedRoom != null && self.transportVessels[i].creature is Player) // Found Player
                     {
-                        //Debug.Log("found player in pipe");
                         if (self.transportVessels[i].wait <= 0) // About to move
                         {
-                            //Debug.Log("about to move");
                             Room realizedRoom = self.transportVessels[i].room.realizedRoom;
                             RWCustom.IntVector2 pos = ShortcutHandler.NextShortcutPosition(self.transportVessels[i].pos, self.transportVessels[i].lastPos, realizedRoom);
+                            
                             if (realizedRoom.GetTile(pos).shortCut == 2) // About to exit
                             {
-                                //Debug.Log("about to exit");
-                                // Looping back
-                                isNewRoom = true;
-                                time2 = totalTimeTracker;
-                                timeDiff = time2.Subtract(time1);
-                                Debug("LapMod: Exiting room at: " + timeString);
-                                if (timeDiff != null)
-                                {
-                                    Debug("Lap Mod: Total room time " + timeDiff.ToString("mm'm:'ss's:'fff'ms'"));
-                                }
+                                shortcutPos = pos;
+                                GetTimes();
 
                                 int num = Array.IndexOf<RWCustom.IntVector2>(realizedRoom.exitAndDenIndex, pos);
-                                if (!wantsNextRoom && enteredFromNode > -1 && !self.transportVessels[i].room.shelter && !self.transportVessels[i].room.gate && self.transportVessels[i].room.connections.Length > 1)
+                                if (!wantsNextRoom && enteredFromNode > -1 && !self.transportVessels[i].room.shelter && !self.transportVessels[i].room.gate && self.transportVessels[i].room.connections.Length > 1) // Looping
                                 {
                                     //Debug.Log("looping");
                                     realizedRoom.PlaySound(SoundID.Player_Tick_Along_In_Shortcut, 0f, 1f, 1f);
@@ -217,7 +252,6 @@ namespace LapMod
                                             }
                                             self.transportVessels[i].entranceNode = enteredFromNode;
                                             self.game.world.rainCycle.timer = timerWhenEntered;
-                                            //instance.transportVessels[i].room = instance.game.world.GetAbstractRoom(num2);
                                             self.betweenRoomsWaitingLobby.Add(self.transportVessels[i]);
                                         }
                                     }
