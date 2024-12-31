@@ -407,6 +407,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="LapMod.cs" />
+    <Compile Include="LapModRemix.cs" />
+    <Compile Include="Panel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
