@@ -97,6 +97,8 @@ namespace LapMod
 
         private static bool isNewRoom = false;
 
+        private int resetCounter = 0;
+
         private static void RoomCamera_ctor(On.RoomCamera.orig_ctor orig, RoomCamera self, RainWorldGame game,
             int cameraNumber)
         {
@@ -123,7 +125,6 @@ namespace LapMod
             orig(self, eu);
         }
 
-        private int resetCounter = 0;
         private void RainWorldGame_UpdateHook(On.RainWorldGame.orig_Update orig, RainWorldGame self)
         {
             if(!self.IsArenaSession)
@@ -137,7 +138,7 @@ namespace LapMod
                 }
 
                 KeyCode passthroughKey = LapModRemix.roomPassthroughKey.Value;
-                KeyCode resetKey = LapModRemix.resetKey.Value;
+                //KeyCode resetKey = LapModRemix.resetKey.Value;
                 if (Input.GetKey(passthroughKey) && wantsNextRoomCounter == 0)
                 {
                     wantsNextRoom = !wantsNextRoom;
@@ -149,34 +150,35 @@ namespace LapMod
                     wantsNextRoomCounter--;
                 }
 
-                if (Input.GetKey(resetKey) && resetCounter == 0)
-                {
-                    reset();
-                    resetCounter = 12;
-                }
-                else if (resetCounter > 0)
-                {
-                    resetCounter--;
-                }
+                //if (Input.GetKey(resetKey) && resetCounter == 0)
+                //{
+                //    reset();
+                //    resetCounter = 12;
+                //}
+                //else if (resetCounter > 0)
+                //{
+                //    resetCounter--;
+                //}
             }
             orig(self);
         }
 
-        private void reset()
-        {
-            if (!player.abstractCreature.Room.shelter) {
-                RainWorldGame game = player.room.game;
-                ShortcutHandler handler = game.shortcuts;
+        //private void reset()
+        //{
+        //    if (!player.abstractCreature.Room.shelter) {
+        //        RainWorldGame game = player.room.game;
+        //        ShortcutHandler handler = game.shortcuts;
 
-                ShortcutHandler.ShortCutVessel vessel = new ShortcutHandler.ShortCutVessel(shortcutPos, player, player.room.abstractRoom, 0);
+        //        ShortcutHandler.ShortCutVessel vessel = new ShortcutHandler.ShortCutVessel(shortcutPos, player, player.room.abstractRoom, 0);
 
-                vessel.entranceNode = enteredFromNode;
-                handler.game.world.rainCycle.timer = timerWhenEntered;
-                handler.betweenRoomsWaitingLobby.Add(vessel);
-                player.RemoveFromRoom();
-                GetTimes();
-            }
-        }
+        //        vessel.creature.abstractCreature.pos.abstractNode = enteredFromNode;
+        //        vessel.entranceNode = enteredFromNode;
+        //        handler.game.world.rainCycle.timer = timerWhenEntered;
+        //        handler.betweenRoomsWaitingLobby.Add(vessel);
+        //        player.RemoveFromRoom();
+        //        GetTimes();
+        //    }
+        //}
 
         static void ShortcutHandler_Update(On.ShortcutHandler.orig_Update orig, ShortcutHandler self)
         {
@@ -193,7 +195,7 @@ namespace LapMod
                             
                             if (realizedRoom.GetTile(pos).shortCut == 2) // About to exit
                             {
-                                shortcutPos = pos;
+                                //shortcutPos = pos;
                                 GetTimes();
 
                                 int num = Array.IndexOf<RWCustom.IntVector2>(realizedRoom.exitAndDenIndex, pos);
