@@ -13,7 +13,7 @@ using UnityEngine;
 
 namespace LapMod
 {
-    [BepInPlugin("com.henpemaz.lapmod", "Lap Mod", "0.1.2")]
+    [BepInPlugin("com.henpemaz.lapmod", "Lap Mod", "0.1.3")]
 
     public class LapMod : BaseUnityPlugin
     {
