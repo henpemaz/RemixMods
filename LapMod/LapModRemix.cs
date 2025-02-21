@@ -10,8 +10,8 @@ namespace LapMod
 
         public static Configurable<KeyCode> roomPassthroughKey = instance.config.Bind("roomPassthroughKey", KeyCode.U, new ConfigurableInfo(
         "Keybind to toggle room passthrough", null, "", "Keyboard"));
-        //public static Configurable<KeyCode> resetKey = instance.config.Bind("resetKey", KeyCode.Y, new ConfigurableInfo(
-        //"Keybind to reset as though you exited the room", null, "", "Keyboard"));
+        public static Configurable<KeyCode> resetKey = instance.config.Bind("resetKey", KeyCode.Y, new ConfigurableInfo(
+        "Keybind to reset as though you exited the room", null, "", "Keyboard"));
 
         public override void Initialize()
         {
