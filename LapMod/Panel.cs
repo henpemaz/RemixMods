@@ -1,4 +1,7 @@
 ﻿using UnityEngine;
+using BepInEx;
+using BepInEx.Logging;
+
 
 namespace LapMod
 {
@@ -19,6 +22,8 @@ namespace LapMod
 
         private static int highAlphaCounter = 0;
         private static int highAlphaCounterMax = 80; // 2 seconds
+
+        public static bool initialized = false;
 
         public static void Initialize()
         {
@@ -46,6 +51,7 @@ namespace LapMod
             };
             container.AddChild(passthroughBool);
 
+            initialized = true;
             Update();
 
         }

@@ -1,5 +1,5 @@
 ﻿using System;
-
+using System.Runtime.CompilerServices;
 using System.Security;
 using System.Security.Permissions;
 using BepInEx;
@@ -45,8 +45,8 @@ namespace LapMod
                 On.Player.Update += PlayerUpdateHook;
                 On.Player.SpitOutOfShortCut += SpitOutOfShortCutHook;
                 On.RainWorldGame.Update += RainWorldGame_UpdateHook;
-                On.RoomCamera.ctor += RoomCamera_ctor;
                 On.RoomCamera.ClearAllSprites += RoomCamera_ClearAllSprites;
+                On.RainWorldGame.ctor += RainWorldGame_ctor;
                 Logger.LogInfo("OnModsInit done");
             }
             catch (Exception e)
@@ -93,17 +93,12 @@ namespace LapMod
         private static TimeSpan time2;
         public static TimeSpan timeDiff;
 
-        private static RWCustom.IntVector2 shortcutPos;
-
         private static bool isNewRoom = false;
 
-        private int resetCounter = 0;
-
-        private static void RoomCamera_ctor(On.RoomCamera.orig_ctor orig, RoomCamera self, RainWorldGame game,
-            int cameraNumber)
+        private void RainWorldGame_ctor(On.RainWorldGame.orig_ctor orig, RainWorldGame self, ProcessManager manager)
         {
-            orig(self, game, cameraNumber);
-            if(!game.IsArenaSession)
+            orig(self, manager);
+            if (!self.IsArenaSession)
             {
                 Panel.Initialize();
                 // Reset times on new room/campaign
@@ -115,19 +110,25 @@ namespace LapMod
 
         private static void RoomCamera_ClearAllSprites(On.RoomCamera.orig_ClearAllSprites orig, RoomCamera self)
         {
-            Panel.Remove();
             orig(self);
+            if (Panel.initialized)
+            {
+                Panel.Remove();
+            }
         }
 
         public void PlayerUpdateHook(On.Player.orig_Update orig, Player self, bool eu)
         {
-            player = self;
             orig(self, eu);
+            if (Panel.initialized)
+            {
+                player = self;
+            }
         }
 
         private void RainWorldGame_UpdateHook(On.RainWorldGame.orig_Update orig, RainWorldGame self)
         {
-            if(!self.IsArenaSession)
+            if (Panel.initialized)
             {
                 Panel.Update();
                 if (player != null)
@@ -138,7 +139,7 @@ namespace LapMod
                 }
 
                 KeyCode passthroughKey = LapModRemix.roomPassthroughKey.Value;
-                //KeyCode resetKey = LapModRemix.resetKey.Value;
+                KeyCode resetKey = LapModRemix.resetKey.Value;
                 if (Input.GetKey(passthroughKey) && wantsNextRoomCounter == 0)
                 {
                     wantsNextRoom = !wantsNextRoom;
@@ -149,40 +150,13 @@ namespace LapMod
                 {
                     wantsNextRoomCounter--;
                 }
-
-                //if (Input.GetKey(resetKey) && resetCounter == 0)
-                //{
-                //    reset();
-                //    resetCounter = 12;
-                //}
-                //else if (resetCounter > 0)
-                //{
-                //    resetCounter--;
-                //}
             }
             orig(self);
         }
 
-        //private void reset()
-        //{
-        //    if (!player.abstractCreature.Room.shelter) {
-        //        RainWorldGame game = player.room.game;
-        //        ShortcutHandler handler = game.shortcuts;
-
-        //        ShortcutHandler.ShortCutVessel vessel = new ShortcutHandler.ShortCutVessel(shortcutPos, player, player.room.abstractRoom, 0);
-
-        //        vessel.creature.abstractCreature.pos.abstractNode = enteredFromNode;
-        //        vessel.entranceNode = enteredFromNode;
-        //        handler.game.world.rainCycle.timer = timerWhenEntered;
-        //        handler.betweenRoomsWaitingLobby.Add(vessel);
-        //        player.RemoveFromRoom();
-        //        GetTimes();
-        //    }
-        //}
-
         static void ShortcutHandler_Update(On.ShortcutHandler.orig_Update orig, ShortcutHandler self)
         {
-            if (!self.game.IsArenaSession)
+            if (Panel.initialized)
             {
                 for (int i = self.transportVessels.Count - 1; i >= 0; i--)
                 {
@@ -195,13 +169,10 @@ namespace LapMod
                             
                             if (realizedRoom.GetTile(pos).shortCut == 2) // About to exit
                             {
-                                //shortcutPos = pos;
                                 GetTimes();
-
                                 int num = Array.IndexOf<RWCustom.IntVector2>(realizedRoom.exitAndDenIndex, pos);
                                 if (!wantsNextRoom && enteredFromNode > -1 && !self.transportVessels[i].room.shelter && !self.transportVessels[i].room.gate && self.transportVessels[i].room.connections.Length > 1) // Looping
                                 {
-                                    //Debug.Log("looping");
                                     realizedRoom.PlaySound(SoundID.Player_Tick_Along_In_Shortcut, 0f, 1f, 1f);
 
                                     self.transportVessels[i].PushNewLastPos(self.transportVessels[i].pos);
@@ -245,17 +216,19 @@ namespace LapMod
                     }
                 }
             }
-
             orig(self);
         }
         private void SpitOutOfShortCutHook(On.Player.orig_SpitOutOfShortCut orig, Player self, RWCustom.IntVector2 pos, Room newRoom, bool spitOutAllSticks)
         {
-            if (isNewRoom)
+            if (Panel.initialized)
             {
-                Debug("Lap Mod: Entering room at " + timeString);
-                time1 = totalTimeTracker;
+                if (isNewRoom)
+                {
+                    Debug("Lap Mod: Entering room at " + timeString);
+                    time1 = totalTimeTracker;
+                }
+                isNewRoom = false;
             }
-            isNewRoom = false;
             orig(self, pos, newRoom, spitOutAllSticks);
         }
 
