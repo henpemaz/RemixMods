@@ -31,10 +31,10 @@ namespace SplitScreenCoop
         /// <summary>
         /// Realizer2 in new world
         /// </summary>
-        public void OverWorld_WorldLoaded(On.OverWorld.orig_WorldLoaded orig, OverWorld self)
+        public void OverWorld_WorldLoaded(On.OverWorld.orig_WorldLoaded orig, OverWorld self, bool warpUsed)
         {
             ConsiderColapsing(self.game, true);
-            orig(self);
+            orig(self, warpUsed);
             if (realizer2 != null) MakeRealizer2(self.game);
         }
 

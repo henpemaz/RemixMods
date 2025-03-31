@@ -278,7 +278,7 @@ namespace SplitScreenCoop
                 bool starving = coopSharedFood ? !PlayerHasEnoughFood(alive.First(), false)
                     : alive.All(p=> !PlayerHasEnoughFood(p, false));
                 Logger.LogInfo($"CoopWinOrLoose -> Win(malnourished:{starving})");
-                game.Win(starving);
+                game.Win(starving, false); // is true for watcher warps, should investigate this later
                 return;
             }
             else
