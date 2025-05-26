@@ -1,9 +1,8 @@
 {
   "id": "henpemaz_sweetdreams",
   "name": "Sweet Dreams",
-  "version": "0.1.2",
-  "target_game_version": "v1.9",
-  "authors": "Intikus, Tealppup & Henpemaz",
+  "version": "0.2.0",
+  "authors": "Intikus, Tealppup & Henpemaz, glebi574",
   "description": "One need not travel alone.<LINE><LINE>This mod adds illustrations and songs for your lizard friends that accompany you in your journey. All vanilla slugcats and lizard combinations for you to doze off through the rain.",
   "requirements": [],
   "requirements_names": [],
