@@ -413,6 +413,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="PluginInterface.cs" />
     <Compile Include="SweetDreams.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
