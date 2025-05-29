@@ -19,7 +19,7 @@ namespace SweetDreams
     public void Update(IUpdatableFromOther other);
   }
 
-  public static class ExtDictionary
+  public static class DictionaryExtensions
   {
     // TryGetValue with type conversion
     public static bool TryGetValueWithType<T>(this Dictionary<string, object> self, string name, out T output)
@@ -39,26 +39,29 @@ namespace SweetDreams
         output = value;
     }
 
-    // TryGetValueWithType, where retrieved element is searched in specified class' static fields
-    public static bool TryGetStatic<T>(this Dictionary<string, object> self, string name, out T output) where T : ExtEnum<T>
+    public static bool TryGetExtEnum<T>(this Dictionary<string, object> self, string name, out T output) where T : ExtEnum<T>
     {
-      if (self.TryGetValueWithType(name, out string fieldName) && Plugin.GetStaticElement<T>(fieldName) is T value)
+      if (self.TryGetValueWithType(name, out string fieldName)
+        && ExtEnumBase.TryParse(typeof(T), fieldName, true, out ExtEnumBase enumBase)
+        && enumBase is T result)
       {
-        output = value;
+        output = result;
         return true;
       }
       output = default;
       return false;
     }
 
-    public static void TrySetStatic<T>(this Dictionary<string, object> self, string name, ref T output) where T : ExtEnum<T>
+    public static void TrySetExtEnum<T>(this Dictionary<string, object> self, string name, ref T output) where T : ExtEnum<T>
     {
-      if (self.TryGetValueWithType(name, out string fieldName) && Plugin.GetStaticElement<T>(fieldName) is T value)
-        output = value;
+      if (self.TryGetValueWithType(name, out string fieldName)
+        && ExtEnumBase.TryParse(typeof(T), fieldName, true, out ExtEnumBase enumBase)
+        && enumBase is T result)
+        output = result;
     }
   }
 
-  public static class ExtIDictionary
+  public static class IDictionaryExtensions
   {
     public static void UpdateFromOther(this IDictionary self, IDictionary other)
     {
@@ -78,13 +81,13 @@ namespace SweetDreams
     }
   }
 
-  public static class ExtList
+  public static class ListExtensions
   {
     public static List<AbstractCreature> GetCreaturesWithType(this List<AbstractCreature> creatures, CreatureTemplate.Type type)
     {
       List<AbstractCreature> result = new();
       foreach (AbstractCreature creature in creatures)
-        if (creature.creatureTemplate.type == type)
+        if (creature.state.alive && creature.creatureTemplate.type == type)
           result.Add(creature);
       return result;
     }
@@ -191,7 +194,8 @@ namespace SweetDreams
         case PreferenceMode.Any:
           foreach (AbstractCreature creature in denCreatures)
           {
-            if (creature.creatureTemplate.type == CreatureTemplate.Type.Slugcat && creature.abstractAI == null
+            if (!creature.state.alive
+              || creature.creatureTemplate.type == CreatureTemplate.Type.Slugcat && creature.abstractAI == null
               || !slugcatDreams.dreams.TryGetValue(creature.creatureTemplate.type.value, out dream))
               continue;
             denCreatures = denCreatures.GetCreaturesWithType(creature.creatureTemplate.type);
@@ -202,7 +206,8 @@ namespace SweetDreams
         case PreferenceMode.Pups:
           foreach (AbstractCreature creature in denCreatures)
           {
-            if (creature.abstractAI.RealAI is not SlugNPCAI
+            if (!creature.state.alive
+              || creature.abstractAI.RealAI is not SlugNPCAI
               || !slugcatDreams.dreams.TryGetValue(creature.creatureTemplate.type.value, out dream))
               continue;
             denCreatures = denCreatures.GetCreaturesWithType(MoreSlugcatsEnums.CreatureTemplateType.SlugNPC);
@@ -214,7 +219,8 @@ namespace SweetDreams
         case PreferenceMode.Lizards:
           foreach (AbstractCreature creature in denCreatures)
           {
-            if (creature.abstractAI?.RealAI is not LizardAI
+            if (!creature.state.alive
+              || creature.abstractAI?.RealAI is not LizardAI
               || !slugcatDreams.dreams.TryGetValue(creature.creatureTemplate.type.value, out dream))
               continue;
             denCreatures = denCreatures.GetCreaturesWithType(creature.creatureTemplate.type);
@@ -259,13 +265,6 @@ namespace SweetDreams
           customSprites[i].Value.MoveInFrontOfOtherNode(customSprites[i - 1].Value);
     }
 
-    // Returns static field with given name from specified class
-    public static T GetStaticElement<T>(string name) where T : ExtEnum<T>
-    {
-      ExtEnumBase.TryParse(typeof(T), name, true, out ExtEnumBase result);
-      return result == null ? default : (T)result;
-    }
-
     public class DreamLayer : IUpdatableFromOther
     {
       public string sprite;
@@ -281,7 +280,7 @@ namespace SweetDreams
         layer.TryGetValueWithType("order", out Int64 orderValue);
           order = (int)orderValue;
         layer.TrySetValueWithType("onTop", ref onTop);
-        layer.TrySetStatic("shader", ref shader);
+        layer.TrySetExtEnum("shader", ref shader);
         if (layer.TryGetValueWithType("slugDepthOffset", out double depth))
           slugDepthOffset = (float)depth;
         if (layer.TryGetValueWithType("pos", out List<object> coordinates))
