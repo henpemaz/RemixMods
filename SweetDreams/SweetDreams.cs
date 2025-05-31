@@ -19,7 +19,7 @@ namespace SweetDreams
     public void Update(IUpdatableFromOther other);
   }
 
-  public static class DictionaryExtensions
+  public static class Extensions
   {
     // TryGetValue with type conversion
     public static bool TryGetValueWithType<T>(this Dictionary<string, object> self, string name, out T output)
@@ -39,19 +39,6 @@ namespace SweetDreams
         output = value;
     }
 
-    public static bool TryGetExtEnum<T>(this Dictionary<string, object> self, string name, out T output) where T : ExtEnum<T>
-    {
-      if (self.TryGetValueWithType(name, out string fieldName)
-        && ExtEnumBase.TryParse(typeof(T), fieldName, true, out ExtEnumBase enumBase)
-        && enumBase is T result)
-      {
-        output = result;
-        return true;
-      }
-      output = default;
-      return false;
-    }
-
     public static void TrySetExtEnum<T>(this Dictionary<string, object> self, string name, ref T output) where T : ExtEnum<T>
     {
       if (self.TryGetValueWithType(name, out string fieldName)
@@ -59,10 +46,7 @@ namespace SweetDreams
         && enumBase is T result)
         output = result;
     }
-  }
 
-  public static class IDictionaryExtensions
-  {
     public static void UpdateFromOther(this IDictionary self, IDictionary other)
     {
       foreach (object key in other.Keys)
@@ -79,10 +63,7 @@ namespace SweetDreams
         else
           self[key] = other[key];
     }
-  }
 
-  public static class ListExtensions
-  {
     public static List<AbstractCreature> GetCreaturesWithType(this List<AbstractCreature> creatures, CreatureTemplate.Type type)
     {
       List<AbstractCreature> result = new();
@@ -237,15 +218,11 @@ namespace SweetDreams
       }
       dream ??= fallbackDream;
 
-      if (!dream.song.IsNullOrWhiteSpace())
-      {
-        self.manager.musicPlayer?.MenuRequestsSong(dream.song, 0.5f, 10f);
-      }
-
       self.scene.depthIllustrations[self.scene.depthIllustrations.Count - 1].pos.y -= 80f;
       List<KeyValuePair<DreamLayer, FSprite>> customSprites = new();
-      for (int i = 1; i <= Math.Min(denCreatures.Count, dream.layers.Count); ++i)
-        foreach (KeyValuePair<string, DreamLayer> layerData in dream.layers[i.ToString()])
+      int creatureAmount = Math.Min(denCreatures.Count, dream.layerSets.Count);
+      for (int i = 1; i <= creatureAmount; ++i)
+        foreach (KeyValuePair<string, DreamLayer> layerData in dream.layerSets[i.ToString()].layers)
         {
           DreamLayer layer = layerData.Value;
           MenuDepthIllustration customIllustration =
@@ -263,6 +240,12 @@ namespace SweetDreams
       for (int i = 1; i < customSprites.Count; ++i)
         if (customSprites[i - 1].Key.onTop == customSprites[i].Key.onTop)
           customSprites[i].Value.MoveInFrontOfOtherNode(customSprites[i - 1].Value);
+
+      string song = dream.layerSets[creatureAmount.ToString()].song;
+      if (song.IsNullOrWhiteSpace())
+        song = dream.song;
+      if (!song.IsNullOrWhiteSpace())
+        self.manager.musicPlayer?.MenuRequestsSong(song, 1f, 10f);
     }
 
     public class DreamLayer : IUpdatableFromOther
@@ -300,11 +283,33 @@ namespace SweetDreams
       }
     }
 
+    public class LayerInfo : IUpdatableFromOther
+    {
+      public string song;
+      public Dictionary<string, DreamLayer> layers = new();
+
+      public LayerInfo(Dictionary<string, object> parsedLayers)
+      {
+        parsedLayers.TrySetValueWithType("song", ref song);
+        if (parsedLayers.TryGetValueWithType("bottom", out Dictionary<string, object> bottom))
+          layers["bottom"] = new(bottom);
+        if (parsedLayers.TryGetValueWithType("top", out Dictionary<string, object> top))
+          layers["top"] = new(top);
+      }
+
+      public void Update(IUpdatableFromOther other)
+      {
+        if (other is not LayerInfo layerInfo)
+          return;
+        song = layerInfo.song ?? song;
+        layers.UpdateFromOther(layerInfo.layers);
+      }
+    }
 
     public class Dream : IUpdatableFromOther
     {
       public string song;
-      public Dictionary<string, Dictionary<string, DreamLayer>> layers = new();
+      public Dictionary<string, LayerInfo> layerSets = new();
 
       public Dream(Dictionary<string, object> creatureDream)
       {
@@ -312,16 +317,8 @@ namespace SweetDreams
         if (!creatureDream.TryGetValueWithType("layers", out Dictionary<string, object> indexedLayers))
           return;
         foreach (KeyValuePair<string, object> indexedLayer in indexedLayers)
-        {
-          if (indexedLayer.Value is not Dictionary<string, object> parsedLayers)
-            continue;
-          Dictionary<string, DreamLayer> actualLayers = new();
-          if (parsedLayers.TryGetValueWithType("bottom", out Dictionary<string, object> bottom))
-            actualLayers["bottom"] = new(bottom);
-          if (parsedLayers.TryGetValueWithType("top", out Dictionary<string, object> top))
-            actualLayers["top"] = new(top);
-          layers[indexedLayer.Key] = actualLayers;
-        }
+          if (indexedLayer.Value is Dictionary<string, object> parsedLayers)
+            layerSets[indexedLayer.Key] = new(parsedLayers);
       }
 
       public void Update(IUpdatableFromOther other)
@@ -329,7 +326,7 @@ namespace SweetDreams
         if (other is not Dream dream)
           return;
         song = dream.song ?? song;
-        layers.UpdateFromOther(dream.layers);
+        layerSets.UpdateFromOther(dream.layerSets);
       }
     }
 

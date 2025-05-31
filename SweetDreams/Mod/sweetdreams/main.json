@@ -227,8 +227,10 @@
         }
       },
       "SlugNPC": {
+        "song": "sd_pups_1",
         "layers": {
           "1": {
+            "song": "sd_pups_1",
             "top": {
               "sprite": "survivor_slugnpc 1 Layer 2",
               "order": 1,
@@ -242,6 +244,7 @@
             }
           },
           "2": {
+            "song": "sd_pups_2",
             "top": {
               "sprite": "survivor_slugnpc 2 Layer 2",
               "order": 3,
@@ -255,6 +258,7 @@
             }
           },
           "3": {
+            "song": "sd_pups_3",
             "top": {
               "sprite": "survivor_slugnpc 3 Layer 2",
               "order": 2,
@@ -499,9 +503,11 @@
         }
       },
       "SlugNPC": {
+        "song": "sd_pups_1",
         "layers": {
           "1": {
             "top": {
+            "song": "sd_pups_1",
               "sprite": "survivor_slugnpc 1 Layer 2",
               "order": 1,
               "onTop": true,
@@ -514,6 +520,7 @@
             }
           },
           "2": {
+            "song": "sd_pups_2",
             "top": {
               "sprite": "survivor_slugnpc 2 Layer 2",
               "order": 3,
@@ -527,6 +534,7 @@
             }
           },
           "3": {
+            "song": "sd_pups_3",
             "top": {
               "sprite": "survivor_slugnpc 3 Layer 2",
               "order": 2,
@@ -771,8 +779,10 @@
         }
       },
       "SlugNPC": {
+        "song": "sd_pups_1",
         "layers": {
           "1": {
+            "song": "sd_pups_1",
             "top": {
               "sprite": "survivor_slugnpc 1 Layer 2",
               "order": 2,
@@ -786,6 +796,7 @@
             }
           },
           "2": {
+            "song": "sd_pups_2",
             "top": {
               "sprite": "survivor_slugnpc 2 Layer 2",
               "order": 3,
@@ -799,6 +810,7 @@
             }
           },
           "3": {
+            "song": "sd_pups_3",
             "top": {
               "sprite": "hunter_slugnpc 3 Layer 2",
               "order": 1,
