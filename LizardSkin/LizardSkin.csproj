@@ -83,8 +83,10 @@
     <Content Include="Assets\LizKinIcons.txt" />
     <Content Include="Mod\atlases\LizKinIcons.png" />
     <Content Include="Mod\atlases\LizKinIcons.txt" />
-    <Content Include="Mod\plugins\UwUMod.dll" />
     <Content Include="Mod\thumbnail.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Mod\plugins\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

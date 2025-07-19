@@ -3,13 +3,11 @@ using Menu.Remix;
 using Menu.Remix.MixedUI;
 using Menu.Remix.MixedUI.ValueTypes;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using RWCustom;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Policy;
 using UnityEngine;
 
 namespace LizardSkin
@@ -40,6 +38,25 @@ namespace LizardSkin
             config.Bind<int>("dummy", 0);
             On.Menu.Remix.ConfigContainer.HasConfigChanged += ConfigContainer_HasConfigChanged;
             On.OptionInterface.ResetUIelements += OptionInterface_ResetUIelements;
+
+            this.OnDeactivate += LizardSkinOI_OnDeactivate;
+            this.OnConfigChanged += ConfigOnChange;
+            this.OnConfigReset += LizardSkinOI_OnConfigReset;
+        }
+
+        private void LizardSkinOI_OnDeactivate()
+        {
+            if (!loadingFromRefresh)
+            {
+                LizardSkin.Debug("clearing edits");
+                configBeingEdited = null;
+                hasChanges = false;
+                Tabs = null; // force redraw
+            }
+            else
+            {
+                LizardSkin.Debug("keeping edits into refresh");
+            }
         }
 
         private void OptionInterface_ResetUIelements(On.OptionInterface.orig_ResetUIelements orig, OptionInterface self)
@@ -50,7 +67,8 @@ namespace LizardSkin
 
         private bool ConfigContainer_HasConfigChanged(On.Menu.Remix.ConfigContainer.orig_HasConfigChanged orig)
         {
-            return orig() || (ConfigContainer.ActiveInterface == this && hasChanges);
+            if (ConfigContainer.ActiveInterface == this) return hasChanges;
+            return orig();
         }
 
         private readonly string modDescription =
@@ -70,7 +88,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
             base.Initialize();
             LizardSkin.Debug("LizardSkinOI Initialize");
 
-            if(!ModdingMenu.instance.isReload)
+            if(!loadingFromRefresh || configBeingEdited == null)
             {
                 // This needs to run
                 // 1; when the config is loaded at launch
@@ -107,9 +125,6 @@ You can pick Cosmetics of several types, edit their settings and configure rando
             LizardSkin.Debug("making addprofile");
             Tabs[Tabs.Length - 1] = new OpTab(this, "+");
             Tabs[Tabs.Length - 1].AddItems(new NewProfileHandler(this), new NotAManagerTab(this));
-
-            this.OnConfigChanged += ConfigOnChange;
-            this.OnConfigReset += LizardSkinOI_OnConfigReset;
 
             LizardSkin.Debug("LizardSkin init done");
         }
@@ -269,6 +284,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
 
         private void LizardSkinOI_OnConfigReset()
         {
+            LizardSkin.Debug("LizardSkinOI_OnConfigReset");
             configBeingEdited = MakeEmptyLizKinData();
             hasChanges = true;
             RequestRefresh();
@@ -329,6 +345,7 @@ You can pick Cosmetics of several types, edit their settings and configure rando
                 else
                 {
                     profile.appliesToList = new List<int>() { }; // Disable others
+                    // TODO is this really correct?
                 }
             }
             if (!whiteFound)

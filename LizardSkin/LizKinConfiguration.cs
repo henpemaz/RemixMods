@@ -258,6 +258,7 @@ namespace LizardSkin
 
         internal class LizKinCosmeticDataConverter : AbstractJsonConverter<LizKinCosmeticData>
         {
+            // todo this is somehow saving enums as ints not strings
             protected override LizKinCosmeticData Create(Type objectType, JObject jObject)
             {
                 return MakeCosmeticOfType((CosmeticInstanceType)Enum.Parse(typeof(CosmeticInstanceType), jObject.GetValue("instanceType").Value<string>()));
