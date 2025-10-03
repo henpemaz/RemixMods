@@ -19,7 +19,7 @@ using System.Runtime.CompilerServices;
 
 namespace SplitScreenCoop
 {
-    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.20")]
+    [BepInPlugin("com.henpemaz.splitscreencoop", "SplitScreen Co-op", "0.1.21")]
     public partial class SplitScreenCoop : BaseUnityPlugin
     {
         public static SplitScreenCoopOptions Options;
@@ -746,13 +746,14 @@ namespace SplitScreenCoop
             try
             {
                 var c = new ILCursor(il);
+                int loc = 0;
                 c.GotoNext(MoveType.After,
                     i => i.MatchNewobj<JollyCoop.JollyHUD.JollyPlayerSpecificHud>(),
-                    i => i.MatchStloc(2)
+                    i => i.MatchStloc(out loc)
                     );
 
-                c.Emit(Mono.Cecil.Cil.OpCodes.Ldarg_1);
-                c.Emit(Mono.Cecil.Cil.OpCodes.Ldloc_2);
+                c.Emit(OpCodes.Ldarg_1);
+                c.Emit(OpCodes.Ldloc, loc);
                 c.EmitDelegate<Action<RoomCamera, JollyCoop.JollyHUD.JollyPlayerSpecificHud>>((cam, self) =>
                 {
                     self.SetSplitScreenCamera(cam);
