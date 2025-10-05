@@ -506,7 +506,7 @@ namespace SplitScreenCoop
                 i => i.MatchLdarg(0),
                 i => i.MatchLdfld<RoomCamera>("voidSeaMode"),
                 i => i.MatchBrtrue(out jump),
-                i => i.MatchLdloca(out _)
+                i => i.MatchLdstr(out _)
                 ))
             {
                 var b = c.Index;
